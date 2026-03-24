@@ -1,0 +1,38 @@
+{
+  "name": "secure-hrms-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "npm install",
+    "dev": "concurrently --kill-others-on-fail -n web,api -c blue,green \"npm run dev:web\" \"npm run dev:api\"",
+    "dev:web": "npm run dev --workspace @hrms/web",
+    "dev:api": "npm run dev --workspace @hrms/api",
+    "build": "npm run build --workspace @hrms/web",
+    "check": "npm run lint && npm run build",
+    "lint": "npm run lint:web && npm run lint:api",
+    "lint:web": "npm run lint --workspace @hrms/web",
+    "lint:api": "npm run lint --workspace @hrms/api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "migrate": "npm run db:migrate --workspace @hrms/api",
+    "migrate:status": "npm run db:migrate:status --workspace @hrms/api",
+    "migrate:undo": "npm run db:migrate:undo --workspace @hrms/api",
+    "seed": "npm run db:seed --workspace @hrms/api",
+    "seed:undo": "npm run db:seed:undo --workspace @hrms/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.23.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3"
+  }
+}

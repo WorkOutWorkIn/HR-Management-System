@@ -1,0 +1,39 @@
+{
+  "name": "@hrms/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --watch src src/server.js",
+    "start": "node src/server.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "db:migrate": "sequelize-cli db:migrate --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json",
+    "db:migrate:status": "sequelize-cli db:migrate:status --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json",
+    "db:seed": "sequelize-cli db:seed:all --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json",
+    "db:seed:undo": "sequelize-cli db:seed:undo:all --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json",
+    "db:migration:create": "sequelize-cli migration:generate --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json --name",
+    "db:seed:create": "sequelize-cli seed:generate --config src/database/config/config.cjs --migrations-path src/database/migrations --seeders-path src/database/seeders --models-path src/database/models --options-path src/database/config/options.json --name"
+  },
+  "dependencies": {
+    "@hrms/shared": "0.1.0",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.14.0",
+    "nodemailer": "^6.9.16",
+    "sequelize": "^6.37.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "sequelize-cli": "^6.6.2"
+  }
+}
