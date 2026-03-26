@@ -15,7 +15,7 @@ export function SetupPasswordRoute({ children }) {
   }
 
   if (!user?.mustChangePassword) {
-    return <Navigate replace to={APP_ROUTES.DASHBOARD} />;
+    return <Navigate replace to={APP_ROUTES.PROFILE} />;
   }
 
   return children;

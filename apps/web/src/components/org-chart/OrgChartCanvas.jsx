@@ -239,14 +239,20 @@ export function OrgChartCanvas(props) {
       <OrgChartTabs items={props.workspace.tabs} />
 
       <section className="mt-6 rounded-[36px] border border-white/8 bg-[#08111a] px-6 py-7 shadow-[0_26px_60px_rgba(2,12,27,0.45)] lg:px-8">
-        <div className="max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">
-            {props.workspace.header.eyebrow}
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">
-            {props.workspace.header.title}
-          </h1>
-          <p className="mt-3 max-w-2xl text-lg text-slate-400">{props.workspace.header.subtitle}</p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">
+              {props.workspace.header.eyebrow}
+            </p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">
+              {props.workspace.header.title}
+            </h1>
+            <p className="mt-3 max-w-2xl text-lg text-slate-400">
+              {props.workspace.header.subtitle}
+            </p>
+          </div>
+
+          {props.headerActions ? <div className="shrink-0">{props.headerActions}</div> : null}
         </div>
 
         <div className="mt-8">

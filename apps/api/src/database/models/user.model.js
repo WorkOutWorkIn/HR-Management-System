@@ -132,6 +132,12 @@ class User extends Model {
           defaultValue: 14,
           field: 'annual_leave_quota',
         },
+        sickLeaveQuota: {
+          type: DataTypes.DECIMAL(5, 1),
+          allowNull: false,
+          defaultValue: 14,
+          field: 'sick_leave_quota',
+        },
       },
       buildBaseModelOptions('users', {
         sequelize,

@@ -62,5 +62,11 @@ export function signRefreshToken({ user, tokenId }) {
 }
 
 export function verifyRefreshToken(token) {
-  return jwt.verify(token, env.jwt.refreshSecret);
+  const decoded = jwt.verify(token, env.jwt.refreshSecret);
+
+  if (decoded?.type !== AUTH_TOKEN_TYPES.REFRESH) {
+    throw new jwt.JsonWebTokenError('Invalid refresh token type');
+  }
+
+  return decoded;
 }

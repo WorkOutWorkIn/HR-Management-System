@@ -66,7 +66,7 @@ export function FirstTimePasswordPage() {
 
       setNotice(result.message);
       reset();
-      navigate(APP_ROUTES.DASHBOARD, { replace: true });
+      navigate(APP_ROUTES.PROFILE, { replace: true });
     } catch (error) {
       setErrorMessage(
         error?.response?.data?.message || 'Unable to update your password right now.',

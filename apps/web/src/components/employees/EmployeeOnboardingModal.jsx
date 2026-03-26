@@ -23,6 +23,10 @@ const onboardingSchema = z.object({
     .number()
     .min(0, 'Annual leave quota must be 0 or more')
     .max(365, 'Annual leave quota must be 365 days or fewer'),
+  sickLeaveQuota: z.coerce
+    .number()
+    .min(0, 'Sick leave quota must be 0 or more')
+    .max(365, 'Sick leave quota must be 365 days or fewer'),
   department: z.string().max(100, 'Department is too long').optional().or(z.literal('')),
   jobTitle: z.string().max(100, 'Job title is too long').optional().or(z.literal('')),
 });
@@ -33,6 +37,7 @@ const defaultValues = {
   role: ROLES.EMPLOYEE,
   managerUserId: '',
   annualLeaveQuota: 14,
+  sickLeaveQuota: 14,
   department: '',
   jobTitle: '',
 };
@@ -202,6 +207,19 @@ export function EmployeeOnboardingModal({
                     <Input {...register('annualLeaveQuota')} />
                     {errors.annualLeaveQuota ? (
                       <FieldError>{errors.annualLeaveQuota.message}</FieldError>
+                    ) : null}
+                  </TextField>
+
+                  <TextField
+                    fullWidth
+                    isInvalid={Boolean(errors.sickLeaveQuota)}
+                    name="sickLeaveQuota"
+                    type="number"
+                  >
+                    <Label>Sick leave quota</Label>
+                    <Input {...register('sickLeaveQuota')} />
+                    {errors.sickLeaveQuota ? (
+                      <FieldError>{errors.sickLeaveQuota.message}</FieldError>
                     ) : null}
                   </TextField>
 

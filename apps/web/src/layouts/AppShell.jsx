@@ -76,6 +76,12 @@ function ModuleIcon({ moduleKey }) {
         <path d="M6.5 9v3h10V9M12 12v3" />
       </>
     ),
+    'audit-trail': (
+      <>
+        <path d="M12 3l7 3v5c0 4.8-2.8 7.9-7 10-4.2-2.1-7-5.2-7-10V6l7-3z" />
+        <path d="M9 12l2 2 4-4" />
+      </>
+    ),
     performance: (
       <>
         <path d="M5 17l4-4 3 3 6-7" />

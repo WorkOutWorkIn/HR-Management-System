@@ -17,6 +17,7 @@
     "lint": "npm run lint:web && npm run lint:api",
     "lint:web": "npm run lint --workspace @hrms/web",
     "lint:api": "npm run lint --workspace @hrms/api",
+    "test": "node --test apps/api/src/modules/leave/*.test.js apps/web/src/pages/leave/*.test.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "migrate": "npm run db:migrate --workspace @hrms/api",

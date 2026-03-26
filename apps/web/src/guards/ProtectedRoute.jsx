@@ -25,7 +25,7 @@ export function ProtectedRoute({
   }
 
   if (pendingPasswordChangeOnly && !user?.mustChangePassword) {
-    return <Navigate replace to={APP_ROUTES.DASHBOARD} />;
+    return <Navigate replace to={APP_ROUTES.PROFILE} />;
   }
 
   if (allowedRoles?.length && !hasAnyRole(user?.role, allowedRoles)) {

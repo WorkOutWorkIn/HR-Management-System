@@ -36,6 +36,7 @@ export function EmployeeDetailPage() {
   } = useForm({
     resolver: zodResolver(employeeDetailSchema),
   });
+  const isLockedEmployee = employee?.status === 'LOCKED';
 
   useEffect(() => {
     async function loadEmployee() {
@@ -61,7 +62,13 @@ export function EmployeeDetailPage() {
     setErrorMessage(null);
 
     try {
-      const result = await updateEmployee(id, values);
+      const payload = { ...values };
+
+      if (isLockedEmployee) {
+        delete payload.status;
+      }
+
+      const result = await updateEmployee(id, payload);
       setEmployee(result.user);
       reset({
         fullName: result.user.fullName,
@@ -162,11 +169,16 @@ export function EmployeeDetailPage() {
               className="app-select"
               value={watch('status')}
               onChange={(event) => setValue('status', event.target.value, { shouldValidate: true })}
-              disabled={!canManageEmployee}
+              disabled={!canManageEmployee || isLockedEmployee}
             >
               <option value="ACTIVE">ACTIVE</option>
               <option value="DISABLED">DISABLED</option>
             </select>
+            {isLockedEmployee ? (
+              <span className="block text-xs text-amber-300">
+                Locked accounts must be restored with the Unlock account action.
+              </span>
+            ) : null}
             {errors.status ? (
               <span className="block text-xs text-rose-400">{errors.status.message}</span>
             ) : null}

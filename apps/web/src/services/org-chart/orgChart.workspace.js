@@ -31,15 +31,46 @@ function normalizePerson(person, overrides = {}) {
     workEmail: person.workEmail || '',
     role: person.role || ROLES.EMPLOYEE,
     jobTitle: person.jobTitle || '',
-    department: person.department || 'Core Team',
+    department: person.department || '',
     status: person.status || 'ACTIVE',
     managerUserId: person.managerUserId || null,
     ...overrides,
   };
 }
 
+function mergePeopleRecords(previous, next) {
+  if (!previous) {
+    return next;
+  }
+
+  if (!next) {
+    return previous;
+  }
+
+  return {
+    ...previous,
+    ...next,
+    fullName: next.fullName || previous.fullName,
+    workEmail: next.workEmail || previous.workEmail,
+    role: next.role || previous.role,
+    jobTitle: next.jobTitle || previous.jobTitle,
+    department: next.department || previous.department,
+    status: next.status || previous.status,
+    managerUserId: next.managerUserId || previous.managerUserId,
+  };
+}
+
 function uniquePeople(items = []) {
-  return Array.from(new Map(items.filter(Boolean).map((item) => [item.id, item])).values());
+  return Array.from(
+    items
+      .filter(Boolean)
+      .reduce((accumulator, item) => {
+        const existing = accumulator.get(item.id);
+        accumulator.set(item.id, mergePeopleRecords(existing, item));
+        return accumulator;
+      }, new Map())
+      .values(),
+  );
 }
 
 function sortByName(items = []) {
@@ -135,7 +166,9 @@ function buildOpenRoleNodes(groups = []) {
   );
 }
 
-export async function loadOrgChartDirectoryWorkspace(currentUser) {
+export async function loadOrgChartDirectoryWorkspace(currentUser, options = {}) {
+  const showFullOrganization =
+    options.showFullOrganization ?? currentUser?.role === ROLES.ADMIN;
   const reportingLine = await getMyReportingLine();
   let relationships = [];
   let directReports = reportingLine.directReports || [];
@@ -149,7 +182,7 @@ export async function loadOrgChartDirectoryWorkspace(currentUser) {
     }
   }
 
-  if (currentUser?.role === ROLES.ADMIN) {
+  if (showFullOrganization) {
     try {
       const relationshipResult = await listReportingRelationships();
       relationships = relationshipResult.items || [];
@@ -192,14 +225,17 @@ export async function loadOrgChartDirectoryWorkspace(currentUser) {
     tabs: DIRECTORY_TABS,
     header: {
       title: 'Organization Chart',
-      subtitle: 'Visualizing the reporting structure, departments, and live leadership coverage.',
+      subtitle: showFullOrganization
+        ? 'Visualizing the full reporting structure, departments, and live leadership coverage.'
+        : 'Visualizing your reporting line, department context, and nearby team structure.',
       // eyebrow: 'Module 3',
     },
     liveView: {
-      label: 'Live View',
+      label: showFullOrganization ? 'Org View' : 'Line View',
       employeeCount: chartPeople.length,
       departmentCount: departmentGroups.length,
     },
+    showFullOrganization,
     reportingLine: {
       employee,
       manager,

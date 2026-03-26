@@ -11,6 +11,7 @@ export const APP_ROUTES = Object.freeze({
   LEAVE: '/leave',
   ORG_CHART: '/org-chart',
   ORG_CHART_TEAM: '/org-chart/team',
+  AUDIT_TRAIL: '/audit-trail',
   PERFORMANCE: '/performance',
   SALARY: '/salary',
   SALARY_MANAGE: '/salary/manage',
