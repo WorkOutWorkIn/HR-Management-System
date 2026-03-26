@@ -187,6 +187,18 @@ class User extends Model {
       as: 'createdPublicHolidays',
       foreignKey: 'createdByUserId',
     });
+    User.hasMany(models.SalaryRecord, {
+      as: 'salaryRecords',
+      foreignKey: 'userId',
+    });
+    User.hasMany(models.PayrollRecord, {
+      as: 'payrollRecords',
+      foreignKey: 'userId',
+    });
+    User.hasMany(models.PayrollRecord, {
+      as: 'generatedPayrollRecords',
+      foreignKey: 'generatedByUserId',
+    });
   }
 }
 
