@@ -199,6 +199,18 @@ class User extends Model {
       as: 'authoredPerformanceReviews',
       foreignKey: 'reviewerId',
     });
+    User.hasMany(models.SalaryRecord, {
+      as: 'salaryRecords',
+      foreignKey: 'userId',
+    });
+    User.hasMany(models.PayrollRecord, {
+      as: 'payrollRecords',
+      foreignKey: 'userId',
+    });
+    User.hasMany(models.PayrollRecord, {
+      as: 'generatedPayrollRecords',
+      foreignKey: 'generatedByUserId',
+    });
   }
 }
 

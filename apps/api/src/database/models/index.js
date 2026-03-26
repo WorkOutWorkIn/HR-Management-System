@@ -3,9 +3,11 @@ import AuditLog from './audit-log.model.js';
 import LeaveRequest from './leave-request.model.js';
 import PasswordResetToken from './password-reset-token.model.js';
 import PerformanceReview from './performance-review.model.js';
+import PayrollRecord from './payroll-record.model.js';
 import PublicHoliday from './public-holiday.model.js';
 import RefreshToken from './refresh-token.model.js';
 import ReviewPeriod from './review-period.model.js';
+import SalaryRecord from './salary-record.model.js';
 import User from './user.model.js';
 
 const models = {
@@ -17,6 +19,8 @@ const models = {
   PublicHoliday: PublicHoliday.initialize(sequelize),
   ReviewPeriod: ReviewPeriod.initialize(sequelize),
   PerformanceReview: PerformanceReview.initialize(sequelize),
+  SalaryRecord: SalaryRecord.initialize(sequelize),
+  PayrollRecord: PayrollRecord.initialize(sequelize),
 };
 
 Object.values(models).forEach((model) => {
@@ -43,5 +47,7 @@ export const {
   PublicHoliday: PublicHolidayModel,
   ReviewPeriod: ReviewPeriodModel,
   PerformanceReview: PerformanceReviewModel,
+  SalaryRecord: SalaryRecordModel,
+  PayrollRecord: PayrollRecordModel,
 } = models;
 export default models;
