@@ -18,7 +18,7 @@ export function TeamManagerCard({ manager }) {
           <RoleBadge label={manager.department || 'Core Team'} tone="MANAGER" />
           <RoleBadge label={`${manager.reportsCount || 0} Reports`} tone="ADMIN" />
         </div>
-        <Button className="mt-10 w-full bg-white/10 text-white" radius="lg" variant="solid">
+        <Button className="mt-10" color="default" fullWidth radius="lg" variant="faded">
           Contact Manager
         </Button>
       </div>

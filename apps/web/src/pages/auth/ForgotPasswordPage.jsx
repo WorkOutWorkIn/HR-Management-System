@@ -66,7 +66,7 @@ export function ForgotPasswordPage() {
               <Input placeholder="employee@hrms.local" {...register('workEmail')} />
               {errors.workEmail ? <FieldError>{errors.workEmail.message}</FieldError> : null}
             </TextField>
-            <Button className="w-full" color="primary" isLoading={isSubmitting} type="submit">
+            <Button color="primary" fullWidth isLoading={isSubmitting} type="submit">
               Send reset instructions
             </Button>
           </form>

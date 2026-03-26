@@ -1,166 +1,258 @@
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MiniMap,
+  Panel,
+  ReactFlow,
+  ReactFlowProvider,
+  useNodesInitialized,
+  useReactFlow,
+} from '@xyflow/react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { NoticeBanner } from '@/components/common/NoticeBanner';
+import { buildOrgChartFlow } from '@/services/org-chart/orgChart.flow';
+import { OrgChartFlowNode } from './OrgChartFlowNode';
 import { OrgChartTabs } from './OrgChartTabs';
-import { OrgChartNodeCard } from './OrgChartNodeCard';
-import { DepartmentGroupCard } from './DepartmentGroupCard';
-import { OrgChartToolbar } from './OrgChartToolbar';
-import { OrgChartMiniMap } from './OrgChartMiniMap';
-import { OrgChartFiltersPanel } from './OrgChartFiltersPanel';
-import { OrgChartQuickSearch } from './OrgChartQuickSearch';
+import { RoleBadge } from './RoleBadge';
 
-export function OrgChartCanvas({
-  workspace,
-  selectedNodeId,
-  onSelectNode,
-  searchQuery,
-  onSearchChange,
-  quickSearchResults,
-  onToggleFilter,
-}) {
-  const selectedNode =
-    workspace.quickSearchItems.find((item) => item.id === selectedNodeId) || workspace.rootNode;
-  const groupCount = workspace.departmentGroups.length;
-  const desktopCardWidth = 320;
-  const desktopGap = 32;
-  const desktopGroupsWidth =
-    groupCount > 0 ? groupCount * desktopCardWidth + Math.max(groupCount - 1, 0) * desktopGap : 0;
-  const desktopRailWidth = Math.max(desktopGroupsWidth - desktopCardWidth, 0);
+const nodeTypes = {
+  orgPerson: OrgChartFlowNode,
+};
+
+function getMiniMapColor(node) {
+  if (node.data?.isOpenRole) {
+    return '#38bdf8';
+  }
+
+  if (node.data?.role === 'ADMIN') {
+    return '#fbbf24';
+  }
+
+  if (node.data?.role === 'MANAGER') {
+    return '#22d3ee';
+  }
+
+  return '#475569';
+}
+
+function FocusedNodePanel({ person, onClose }) {
+  return (
+    <div className="w-[236px] rounded-[26px] border border-white/8 bg-slate-950/82 p-4 shadow-[0_20px_45px_rgba(2,12,27,0.34)] backdrop-blur">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-slate-500">
+          Focused node
+        </p>
+        <button
+          aria-label="Close focused node panel"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg leading-none text-slate-300 transition hover:border-cyan-300/30 hover:text-white"
+          type="button"
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <p className="truncate text-xl font-semibold text-white">{person.fullName}</p>
+        <p className="truncate text-sm text-cyan-100/90">{person.jobTitle || person.role}</p>
+        {person.workEmail ? <p className="truncate text-xs text-slate-500">{person.workEmail}</p> : null}
+        <div className="pt-1">
+          <RoleBadge
+            compact
+            label={person.role === 'OPEN_ROLE' ? 'Open Role' : person.role}
+            tone={person.role}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveViewPill({ liveView }) {
+  return (
+    <div className="inline-flex items-center gap-3 rounded-full border border-cyan-400/12 bg-slate-950/80 px-4 py-3 text-sm shadow-[0_12px_30px_rgba(2,12,27,0.32)] backdrop-blur">
+      <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.55)]" />
+      <span className="font-semibold uppercase tracking-[0.2em] text-cyan-200">
+        {liveView.label}
+      </span>
+      <span className="text-slate-400">{liveView.employeeCount} Employees</span>
+    </div>
+  );
+}
+
+function OrgChartFlowWorkspace({ workspace, selectedNodeId, onSelectNode }) {
+  const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+  const lastStructureRef = useRef('');
+  const flow = useMemo(
+    () =>
+      buildOrgChartFlow(workspace, {
+        selectedNodeId,
+      }),
+    [selectedNodeId, workspace],
+  );
+  const structureSignature = useMemo(
+    () =>
+      `${flow.nodes.map((node) => node.id).join('|')}::${flow.edges
+        .map((edge) => edge.id)
+        .join('|')}`,
+    [flow.edges, flow.nodes],
+  );
+  const selectedNode = useMemo(
+    () => flow.nodes.find((node) => node.id === selectedNodeId)?.data || null,
+    [flow.nodes, selectedNodeId],
+  );
+
+  const focusNode = useCallback(
+    (nodeId) => {
+      if (!nodeId) {
+        return;
+      }
+
+      onSelectNode?.(nodeId);
+
+      window.requestAnimationFrame(() => {
+        const node = reactFlow.getNode(nodeId);
+
+        if (!node) {
+          return;
+        }
+
+        const width = node.measured?.width || node.width || 0;
+        const height = node.measured?.height || node.height || 0;
+        const position = node.positionAbsolute || node.position;
+
+        reactFlow.setCenter(position.x + width / 2, position.y + height / 2, {
+          duration: 420,
+          zoom: Math.max(reactFlow.getZoom(), 0.92),
+        });
+      });
+    },
+    [onSelectNode, reactFlow],
+  );
+
+  const fitGraphToView = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      reactFlow.fitView({
+        duration: 420,
+        maxZoom: 1,
+        minZoom: 0.58,
+        padding: 0.16,
+      });
+    });
+  }, [reactFlow]);
+
+  useEffect(() => {
+    if (!nodesInitialized || !flow.nodes.length) {
+      return;
+    }
+
+    if (lastStructureRef.current === structureSignature) {
+      return;
+    }
+
+    lastStructureRef.current = structureSignature;
+    fitGraphToView();
+  }, [fitGraphToView, flow.nodes.length, nodesInitialized, structureSignature]);
+
+  useEffect(() => {
+    if (!nodesInitialized || !selectedNodeId) {
+      return;
+    }
+
+    focusNode(selectedNodeId);
+  }, [focusNode, nodesInitialized, selectedNodeId]);
+
+  if (!flow.nodes.length) {
+    return (
+      <div className="flex h-[720px] items-center justify-center rounded-[32px] border border-white/8 bg-[#060d14]">
+        <NoticeBanner tone="info">
+          No reporting relationships are available yet. Assign employees to managers to populate the
+          chart.
+        </NoticeBanner>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <OrgChartTabs items={workspace.tabs} />
+    <div className="h-[720px] overflow-hidden rounded-[32px] border border-white/8 bg-[#060d14] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <ReactFlow
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
+        zoomOnDoubleClick={false}
+        selectionOnDrag={false}
+        deleteKeyCode={null}
+        disableKeyboardA11y={false}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable
+        proOptions={{ hideAttribution: true }}
+        minZoom={0.42}
+        maxZoom={1.3}
+        nodeTypes={nodeTypes}
+        nodes={flow.nodes}
+        edges={flow.edges}
+        onNodeClick={(_, node) => focusNode(node.id)}
+        onPaneClick={() => onSelectNode?.(null)}
+      >
+        <Background
+          color="rgba(51, 65, 85, 0.32)"
+          gap={24}
+          size={1}
+          variant={BackgroundVariant.Dots}
+        />
+        <Controls
+          className="org-chart-flow__controls"
+          position="top-left"
+          orientation="horizontal"
+          showInteractive={false}
+        />
+        <MiniMap
+          className="org-chart-flow__minimap"
+          maskColor="rgba(2, 6, 23, 0.6)"
+          nodeColor={getMiniMapColor}
+          pannable
+          position="bottom-right"
+          style={{ bottom: 20, height: 124, right: 20, width: 180 }}
+          zoomable
+        />
 
-      <section className="relative overflow-hidden rounded-[36px] border border-white/8 bg-[#08111a] px-6 py-7 shadow-[0_26px_60px_rgba(2,12,27,0.45)] lg:px-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.08),transparent_35%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.06),transparent_25%)]" />
-        <div className="relative z-10">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">
-                {workspace.header.eyebrow}
-              </p>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">
-                {workspace.header.title}
-              </h1>
-              <p className="mt-3 max-w-2xl text-lg text-slate-400">{workspace.header.subtitle}</p>
-            </div>
-            <OrgChartToolbar
-              liveView={workspace.liveView}
-              onZoomIn={() => {}}
-              onZoomOut={() => {}}
-              onReset={() => onSelectNode?.(workspace.rootNode?.id)}
-            />
-          </div>
+        <Panel position="top-right" style={{ right: 20, top: 20 }}>
+          <LiveViewPill liveView={workspace.liveView} />
+        </Panel>
 
-          <div className="relative mt-14 min-h-[880px]">
-            <div className="mx-auto flex max-w-4xl flex-col items-center">
-              <div className="w-full max-w-md">
-                <OrgChartNodeCard
-                  person={workspace.rootNode}
-                  featured
-                  selected={selectedNodeId === workspace.rootNode?.id}
-                  onSelect={onSelectNode}
-                />
-              </div>
+        {selectedNode ? (
+          <Panel position="top-right" style={{ right: 20, top: 92 }}>
+            <FocusedNodePanel person={selectedNode} onClose={() => onSelectNode?.(null)} />
+          </Panel>
+        ) : null}
+      </ReactFlow>
+    </div>
+  );
+}
 
-              {groupCount ? (
-                <>
-                  <div className="mt-4 h-14 w-px bg-gradient-to-b from-cyan-300/75 via-cyan-300/30 to-transparent" />
+export function OrgChartCanvas(props) {
+  return (
+    <div>
+      <OrgChartTabs items={props.workspace.tabs} />
 
-                  <div className="hidden xl:block">
-                    {groupCount > 1 ? (
-                      <div className="relative">
-                        <div
-                          className="mx-auto h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent"
-                          style={{ width: `${desktopRailWidth}px` }}
-                        />
-                        <div className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/80 shadow-[0_0_14px_rgba(34,211,238,0.55)]" />
-                      </div>
-                    ) : null}
+      <section className="mt-6 rounded-[36px] border border-white/8 bg-[#08111a] px-6 py-7 shadow-[0_26px_60px_rgba(2,12,27,0.45)] lg:px-8">
+        <div className="max-w-3xl">
+          <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">
+            {props.workspace.header.eyebrow}
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            {props.workspace.header.title}
+          </h1>
+          <p className="mt-3 max-w-2xl text-lg text-slate-400">{props.workspace.header.subtitle}</p>
+        </div>
 
-                    <div
-                      className="mx-auto mt-0 grid gap-8"
-                      style={{
-                        gridTemplateColumns: `repeat(${groupCount}, minmax(${desktopCardWidth}px, ${desktopCardWidth}px))`,
-                      }}
-                    >
-                      {workspace.departmentGroups.map((group) => (
-                        <div key={group.id} className="flex flex-col items-center">
-                          <div className="h-7 w-px bg-gradient-to-b from-cyan-300/45 to-cyan-300/0" />
-                          <DepartmentGroupCard
-                            group={group}
-                            selectedNodeId={selectedNodeId}
-                            onSelectNode={onSelectNode}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 space-y-6 xl:hidden">
-                    {workspace.departmentGroups.map((group) => (
-                      <div key={group.id} className="flex flex-col items-center">
-                        <div className="h-6 w-px bg-gradient-to-b from-cyan-300/45 to-cyan-300/0" />
-                        <DepartmentGroupCard
-                          group={group}
-                          selectedNodeId={selectedNodeId}
-                          onSelectNode={onSelectNode}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            <div className="absolute right-0 top-0 hidden xl:block w-[220px]">
-              <OrgChartMiniMap groups={workspace.departmentGroups} />
-              <div className="mt-5 rounded-[28px] border border-white/8 bg-slate-950/70 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Focused node</p>
-                {selectedNode ? (
-                  <div className="mt-4">
-                    <p className="text-lg font-semibold text-white">{selectedNode.fullName}</p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {selectedNode.jobTitle || selectedNode.role}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-slate-400">Select a node to inspect the hierarchy.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="absolute bottom-0 left-0 hidden xl:grid gap-5 xl:grid-cols-[340px,340px]">
-              <OrgChartFiltersPanel filters={workspace.filters} onToggle={onToggleFilter} />
-              <OrgChartQuickSearch
-                value={searchQuery}
-                onChange={onSearchChange}
-                results={quickSearchResults}
-                onSelect={onSelectNode}
-              />
-            </div>
-
-            <div className="mt-12 grid gap-5 xl:hidden">
-              <OrgChartFiltersPanel filters={workspace.filters} onToggle={onToggleFilter} />
-              <OrgChartQuickSearch
-                value={searchQuery}
-                onChange={onSearchChange}
-                results={quickSearchResults}
-                onSelect={onSelectNode}
-              />
-              <div className="rounded-[28px] border border-white/8 bg-slate-950/70 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Focused node</p>
-                {selectedNode ? (
-                  <div className="mt-4">
-                    <p className="text-lg font-semibold text-white">{selectedNode.fullName}</p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {selectedNode.jobTitle || selectedNode.role}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-slate-400">Select a node to inspect the hierarchy.</p>
-                )}
-              </div>
-              <OrgChartMiniMap groups={workspace.departmentGroups} />
-            </div>
-          </div>
+        <div className="mt-8">
+          <ReactFlowProvider>
+            <OrgChartFlowWorkspace {...props} />
+          </ReactFlowProvider>
         </div>
       </section>
     </div>

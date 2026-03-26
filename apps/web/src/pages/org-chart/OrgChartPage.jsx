@@ -8,12 +8,7 @@ import { NoticeBanner } from '@/components/common/NoticeBanner';
 import { PageLoader } from '@/components/common/PageLoader';
 import { OrgChartCanvas } from '@/components/org-chart/OrgChartCanvas';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  assignEmployeeManager,
-  getMyReportingLine,
-  listDirectReports,
-  listReportingRelationships,
-} from '@/services/org-chart/orgChart.api';
+import { assignEmployeeManager } from '@/services/org-chart/orgChart.api';
 import { loadOrgChartDirectoryWorkspace } from '@/services/org-chart/orgChart.workspace';
 
 const assignmentSchema = z.object({
@@ -32,9 +27,7 @@ export function OrgChartPage() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [filters, setFilters] = useState({});
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -54,26 +47,18 @@ export function OrgChartPage() {
 
     try {
       const nextWorkspace = await loadOrgChartDirectoryWorkspace(user);
-      const [reportingResult, relationshipsResult, directReportsResult] = await Promise.all([
-        getMyReportingLine(),
-        isAdmin ? listReportingRelationships() : Promise.resolve({ items: [] }),
-        canViewDirectReports ? listDirectReports() : Promise.resolve({ items: [] }),
-      ]);
 
       setWorkspace(nextWorkspace);
-      setSelectedNodeId(nextWorkspace.rootNode?.id || null);
-      setFilters(
-        Object.fromEntries((nextWorkspace.filters || []).map((filter) => [filter.key, filter.active])),
-      );
-      setReportingLine(reportingResult);
-      setRelationships(relationshipsResult.items || []);
-      setDirectReports(directReportsResult.items || []);
+      setSelectedNodeId(null);
+      setReportingLine(nextWorkspace.reportingLine);
+      setRelationships(nextWorkspace.relationships || []);
+      setDirectReports(nextWorkspace.directReports || []);
     } catch (error) {
       setErrorMessage(error?.response?.data?.message || 'Unable to load the organization chart.');
     } finally {
       setLoading(false);
     }
-  }, [canViewDirectReports, isAdmin, user]);
+  }, [user]);
 
   useEffect(() => {
     loadOrgChartData();
@@ -88,30 +73,6 @@ export function OrgChartPage() {
       relationshipUsers.filter((employee) => [ROLES.MANAGER, ROLES.ADMIN].includes(employee.role)),
     [relationshipUsers],
   );
-  const filteredQuickSearchItems = useMemo(() => {
-    if (!workspace) {
-      return [];
-    }
-
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return workspace.quickSearchItems;
-    }
-
-    return workspace.quickSearchItems.filter((item) =>
-      [item.fullName, item.jobTitle, item.department, item.role]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [searchQuery, workspace]);
-
-  const handleToggleFilter = useCallback((filterKey) => {
-    setFilters((current) => ({
-      ...current,
-      [filterKey]: !current[filterKey],
-    }));
-  }, []);
 
   const onAssignManager = handleSubmit(async (values) => {
     setNotice(null);
@@ -144,19 +105,9 @@ export function OrgChartPage() {
 
       {workspace ? (
         <OrgChartCanvas
-          workspace={{
-            ...workspace,
-            filters: workspace.filters.map((filter) => ({
-              ...filter,
-              active: filters[filter.key] ?? filter.active,
-            })),
-          }}
+          workspace={workspace}
           selectedNodeId={selectedNodeId}
           onSelectNode={setSelectedNodeId}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          quickSearchResults={filteredQuickSearchItems}
-          onToggleFilter={handleToggleFilter}
         />
       ) : null}
 
@@ -169,14 +120,18 @@ export function OrgChartPage() {
           <CardBody className="grid gap-4 md:grid-cols-2">
             <div className="rounded-[24px] border border-white/8 bg-slate-950/60 p-5">
               <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Current employee</p>
-              <p className="mt-4 text-2xl font-semibold text-white">{reportingLine?.employee?.fullName}</p>
+              <p className="mt-4 text-2xl font-semibold text-white">
+                {reportingLine?.employee?.fullName}
+              </p>
               <p className="mt-1 text-sm text-slate-400">{reportingLine?.employee?.workEmail}</p>
             </div>
             <div className="rounded-[24px] border border-white/8 bg-slate-950/60 p-5">
               <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Reports to</p>
               {reportingLine?.manager ? (
                 <>
-                  <p className="mt-4 text-2xl font-semibold text-white">{reportingLine.manager.fullName}</p>
+                  <p className="mt-4 text-2xl font-semibold text-white">
+                    {reportingLine.manager.fullName}
+                  </p>
                   <p className="mt-1 text-sm text-cyan-200">
                     {reportingLine.manager.jobTitle || reportingLine.manager.role}
                   </p>
@@ -231,7 +186,7 @@ export function OrgChartPage() {
               <label className="space-y-2 text-sm text-slate-200">
                 <span className="block">Employee</span>
                 <select
-                  className="w-full rounded-2xl border border-white/8 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                  className="app-select"
                   value={watch('employeeId')}
                   onChange={(event) =>
                     setValue('employeeId', event.target.value, { shouldValidate: true })
@@ -252,7 +207,7 @@ export function OrgChartPage() {
               <label className="space-y-2 text-sm text-slate-200">
                 <span className="block">Manager</span>
                 <select
-                  className="w-full rounded-2xl border border-white/8 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                  className="app-select"
                   value={watch('managerUserId')}
                   onChange={(event) =>
                     setValue('managerUserId', event.target.value, { shouldValidate: true })
@@ -266,7 +221,9 @@ export function OrgChartPage() {
                   ))}
                 </select>
                 {errors.managerUserId ? (
-                  <span className="block text-xs text-rose-400">{errors.managerUserId.message}</span>
+                  <span className="block text-xs text-rose-400">
+                    {errors.managerUserId.message}
+                  </span>
                 ) : null}
               </label>
 
@@ -283,7 +240,9 @@ export function OrgChartPage() {
                   key={relationship.employee.id}
                   className="rounded-[24px] border border-white/8 bg-slate-950/55 p-4"
                 >
-                  <p className="text-lg font-semibold text-white">{relationship.employee.fullName}</p>
+                  <p className="text-lg font-semibold text-white">
+                    {relationship.employee.fullName}
+                  </p>
                   <p className="text-sm text-slate-400">
                     {relationship.employee.workEmail} ({relationship.employee.role})
                   </p>

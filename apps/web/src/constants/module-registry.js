@@ -36,10 +36,8 @@ export const moduleRegistry = Object.freeze([
     key: 'performance',
     href: APP_ROUTES.PERFORMANCE,
     label: 'Performance',
-    title: 'Performance',
-    description: 'Performance reviews, goals, and manager workflows are intentionally scaffold-only for now.',
-    allowedRoles: [ROLES.MANAGER],
-    placeholder: true,
+    allowedRoles: [ROLES.EMPLOYEE],
+    placeholder: false,
   },
   {
     key: 'salary',

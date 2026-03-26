@@ -18,10 +18,11 @@ export function DirectReportsGrid({
         </div>
         <div className="flex items-center gap-2">
           <Button
+            aria-label="Show grid view"
+            color={viewMode === 'grid' ? 'primary' : 'default'}
             isIconOnly
             radius="lg"
-            variant={viewMode === 'grid' ? 'solid' : 'light'}
-            className={viewMode === 'grid' ? 'bg-cyan-400/15 text-cyan-200' : 'text-slate-400'}
+            variant={viewMode === 'grid' ? 'flat' : 'light'}
             onPress={() => onViewModeChange?.('grid')}
           >
             <span className="grid grid-cols-2 gap-1">
@@ -32,10 +33,11 @@ export function DirectReportsGrid({
             </span>
           </Button>
           <Button
+            aria-label="Show list view"
+            color={viewMode === 'list' ? 'primary' : 'default'}
             isIconOnly
             radius="lg"
-            variant={viewMode === 'list' ? 'solid' : 'light'}
-            className={viewMode === 'list' ? 'bg-cyan-400/15 text-cyan-200' : 'text-slate-400'}
+            variant={viewMode === 'list' ? 'flat' : 'light'}
             onPress={() => onViewModeChange?.('list')}
           >
             <span className="flex flex-col gap-1">

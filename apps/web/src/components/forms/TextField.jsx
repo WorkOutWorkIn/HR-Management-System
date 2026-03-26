@@ -28,8 +28,8 @@ function mergeDescriptions(...values) {
 
 const defaultInputClassNames = {
   inputWrapper:
-    'border-white/10 bg-slate-950/70 shadow-none transition data-[hover=true]:border-cyan-400/25 group-data-[focus=true]:border-cyan-400/40',
-  input: 'text-white placeholder:text-slate-500',
+    'border-[color:var(--field-border)] bg-[color:var(--field-bg)] shadow-none transition data-[hover=true]:border-[color:var(--field-border-hover)] group-data-[focus=true]:border-[color:var(--field-border-focus)]',
+  input: 'text-[color:var(--field-foreground)] placeholder:text-[color:var(--field-placeholder)]',
   innerWrapper: 'gap-2',
 };
 
@@ -82,7 +82,7 @@ export function Label({ children, className }) {
 
   return (
     <label
-      className={joinClasses('text-sm font-medium text-slate-200', className)}
+      className={joinClasses('text-sm font-medium text-[var(--app-foreground)]', className)}
       htmlFor={context?.inputId}
     >
       {children}
@@ -143,7 +143,7 @@ export function Description({ children, className }) {
 
   return (
     <p
-      className={joinClasses('text-xs leading-relaxed text-slate-400', className)}
+      className={joinClasses('text-xs leading-relaxed text-[var(--app-muted)]', className)}
       id={context?.descriptionId}
     >
       {children}

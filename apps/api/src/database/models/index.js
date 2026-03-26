@@ -2,8 +2,10 @@ import sequelize from '../../config/db.js';
 import AuditLog from './audit-log.model.js';
 import LeaveRequest from './leave-request.model.js';
 import PasswordResetToken from './password-reset-token.model.js';
+import PerformanceReview from './performance-review.model.js';
 import PublicHoliday from './public-holiday.model.js';
 import RefreshToken from './refresh-token.model.js';
+import ReviewPeriod from './review-period.model.js';
 import User from './user.model.js';
 
 const models = {
@@ -13,6 +15,8 @@ const models = {
   AuditLog: AuditLog.initialize(sequelize),
   LeaveRequest: LeaveRequest.initialize(sequelize),
   PublicHoliday: PublicHoliday.initialize(sequelize),
+  ReviewPeriod: ReviewPeriod.initialize(sequelize),
+  PerformanceReview: PerformanceReview.initialize(sequelize),
 };
 
 Object.values(models).forEach((model) => {
@@ -37,5 +41,7 @@ export const {
   AuditLog: AuditLogModel,
   LeaveRequest: LeaveRequestModel,
   PublicHoliday: PublicHolidayModel,
+  ReviewPeriod: ReviewPeriodModel,
+  PerformanceReview: PerformanceReviewModel,
 } = models;
 export default models;

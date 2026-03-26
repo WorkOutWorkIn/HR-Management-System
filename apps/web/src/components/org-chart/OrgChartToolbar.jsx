@@ -24,13 +24,13 @@ export function OrgChartToolbar({ liveView, onZoomIn, onZoomOut, onReset }) {
     <div className="space-y-4">
       <div className="rounded-[28px] border border-white/8 bg-slate-950/80 p-3 shadow-[0_24px_50px_rgba(2,12,27,0.34)] backdrop-blur">
         <div className="grid gap-3">
-          <Button isIconOnly variant="light" className="bg-white/[0.02] text-slate-200" onPress={onZoomIn}>
+          <Button aria-label="Zoom in" color="default" isIconOnly variant="light" onPress={onZoomIn}>
             <IconMagnifier type="plus" />
           </Button>
-          <Button isIconOnly variant="light" className="bg-white/[0.02] text-slate-200" onPress={onZoomOut}>
+          <Button aria-label="Zoom out" color="default" isIconOnly variant="light" onPress={onZoomOut}>
             <IconMagnifier type="minus" />
           </Button>
-          <Button isIconOnly variant="light" className="bg-white/[0.02] text-slate-200" onPress={onReset}>
+          <Button aria-label="Reset view" color="default" isIconOnly variant="light" onPress={onReset}>
             <IconFrame />
           </Button>
         </div>

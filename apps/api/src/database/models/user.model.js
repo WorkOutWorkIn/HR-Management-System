@@ -187,6 +187,18 @@ class User extends Model {
       as: 'createdPublicHolidays',
       foreignKey: 'createdByUserId',
     });
+    User.hasMany(models.ReviewPeriod, {
+      as: 'createdReviewPeriods',
+      foreignKey: 'createdByUserId',
+    });
+    User.hasMany(models.PerformanceReview, {
+      as: 'employeePerformanceReviews',
+      foreignKey: 'employeeId',
+    });
+    User.hasMany(models.PerformanceReview, {
+      as: 'authoredPerformanceReviews',
+      foreignKey: 'reviewerId',
+    });
   }
 }
 

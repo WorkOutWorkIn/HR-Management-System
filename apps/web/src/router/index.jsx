@@ -14,6 +14,7 @@ import { LeavePage } from '@/pages/leave/LeavePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { OrgChartPage } from '@/pages/org-chart/OrgChartPage';
 import { TeamViewPage } from '@/pages/org-chart/TeamViewPage';
+import { PerformancePage } from '@/pages/performance/PerformancePage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { ForbiddenPage } from '@/pages/common/ForbiddenPage';
@@ -39,6 +40,10 @@ const protectedChildren = [
   {
     path: APP_ROUTES.ORG_CHART.slice(1),
     element: <OrgChartPage />,
+  },
+  {
+    path: APP_ROUTES.PERFORMANCE.slice(1),
+    element: <PerformancePage />,
   },
   {
     path: APP_ROUTES.ORG_CHART_TEAM.slice(1),
