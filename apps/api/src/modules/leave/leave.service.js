@@ -15,6 +15,12 @@ import {
   serializeLeaveRequest,
   serializePublicHoliday,
 } from './leave.utils.js';
+import {
+  ANNUAL_LEAVE_DEDUCTION_POLICY,
+  SICK_LEAVE_DEDUCTION_POLICY,
+  assertLeaveRequestWithinBalance,
+  assertSickLeaveFullDayOnly,
+} from './leave.policy.js';
 
 function getLeaveRequestInclude() {
   return [
@@ -82,7 +88,7 @@ async function ensureNoOverlap({ employeeId, startDate, endDate, transaction }) 
 
 async function getActor(actorUserId) {
   const actor = await UserModel.findByPk(actorUserId, {
-    attributes: ['id', 'role', 'fullName', 'workEmail', 'annualLeaveQuota'],
+    attributes: ['id', 'role', 'fullName', 'workEmail', 'annualLeaveQuota', 'sickLeaveQuota'],
   });
 
   if (!actor) {
@@ -145,12 +151,12 @@ function getCurrentYearRange() {
   };
 }
 
-async function calculateApprovedAnnualLeaveUsed({ employeeId, transaction }) {
+async function calculateApprovedLeaveUsed({ employeeId, leaveType, transaction }) {
   const { currentYear, yearStart, yearEnd } = getCurrentYearRange();
-  const approvedAnnualRequests = await LeaveRequestModel.findAll({
+  const approvedLeaveRequests = await LeaveRequestModel.findAll({
     where: {
       employeeId,
-      leaveType: LEAVE_TYPES.ANNUAL,
+      leaveType,
       status: LEAVE_REQUEST_STATUSES.APPROVED,
       startDate: {
         [Op.lte]: yearEnd,
@@ -162,7 +168,7 @@ async function calculateApprovedAnnualLeaveUsed({ employeeId, transaction }) {
     transaction,
   });
 
-  if (!approvedAnnualRequests.length) {
+  if (!approvedLeaveRequests.length) {
     return {
       currentYear,
       usedDays: 0,
@@ -170,7 +176,7 @@ async function calculateApprovedAnnualLeaveUsed({ employeeId, transaction }) {
   }
 
   const holidaySet = await getPublicHolidaySet(yearStart, yearEnd, transaction);
-  const usedDays = approvedAnnualRequests.reduce((total, request) => {
+  const usedDays = approvedLeaveRequests.reduce((total, request) => {
     const overlapStart = request.startDate > yearStart ? request.startDate : yearStart;
     const overlapEnd = request.endDate < yearEnd ? request.endDate : yearEnd;
     const startDayPortion =
@@ -198,23 +204,44 @@ async function calculateApprovedAnnualLeaveUsed({ employeeId, transaction }) {
 
 export async function getMyLeaveBalance(userId) {
   const user = await UserModel.findByPk(userId, {
-    attributes: ['id', 'annualLeaveQuota'],
+    attributes: ['id', 'annualLeaveQuota', 'sickLeaveQuota'],
   });
 
   if (!user) {
     throw new ApiError(404, 'User not found', 'USER_NOT_FOUND');
   }
 
-  const usage = await calculateApprovedAnnualLeaveUsed({ employeeId: user.id });
-  const quota = Number(user.annualLeaveQuota);
-  const remainingDays = Number((quota - usage.usedDays).toFixed(1));
+  const annualUsage = await calculateApprovedLeaveUsed({
+    employeeId: user.id,
+    leaveType: LEAVE_TYPES.ANNUAL,
+  });
+  const sickUsage = await calculateApprovedLeaveUsed({
+    employeeId: user.id,
+    leaveType: LEAVE_TYPES.SICK,
+  });
+  const annualQuota = Number(user.annualLeaveQuota);
+  const sickQuota = Number(user.sickLeaveQuota);
+  const annualRemainingDays = Number((annualQuota - annualUsage.usedDays).toFixed(1));
+  const sickRemainingDays = Number((sickQuota - sickUsage.usedDays).toFixed(1));
 
   return {
-    year: usage.currentYear,
-    annualLeaveQuota: quota,
-    usedAnnualLeaveDays: usage.usedDays,
-    remainingAnnualLeaveDays: remainingDays,
-    deductionPolicy: 'Annual leave is deducted only after approval. Sick leave does not reduce quota.',
+    year: annualUsage.currentYear,
+    balances: {
+      [LEAVE_TYPES.ANNUAL]: {
+        leaveType: LEAVE_TYPES.ANNUAL,
+        quota: annualQuota,
+        usedDays: annualUsage.usedDays,
+        remainingDays: annualRemainingDays,
+        deductionPolicy: ANNUAL_LEAVE_DEDUCTION_POLICY,
+      },
+      [LEAVE_TYPES.SICK]: {
+        leaveType: LEAVE_TYPES.SICK,
+        quota: sickQuota,
+        usedDays: sickUsage.usedDays,
+        remainingDays: sickRemainingDays,
+        deductionPolicy: SICK_LEAVE_DEDUCTION_POLICY,
+      },
+    },
   };
 }
 
@@ -223,7 +250,12 @@ export async function createLeaveRequest({ actorUserId, payload, request }) {
   const startDate = payload.startDate;
   const endDate = payload.endDate;
   const startDayPortion = payload.startDayPortion || LEAVE_DAY_PORTIONS.FULL;
-  const endDayPortion = payload.endDayPortion || LEAVE_DAY_PORTIONS.FULL;
+  const endDayPortion = payload.endDayPortion || startDayPortion;
+
+  assertSickLeaveFullDayOnly({
+    leaveType: payload.leaveType,
+    dayPortion: startDayPortion,
+  });
 
   ensureDateRange({ startDate, endDate });
 
@@ -244,6 +276,19 @@ export async function createLeaveRequest({ actorUserId, payload, request }) {
       startDayPortion,
       endDayPortion,
       publicHolidaySet,
+    });
+    const usage = await calculateApprovedLeaveUsed({
+      employeeId: actor.id,
+      leaveType: payload.leaveType,
+      transaction,
+    });
+
+    assertLeaveRequestWithinBalance({
+      leaveType: payload.leaveType,
+      requestedDurationDays: durationDays,
+      leaveQuota:
+        payload.leaveType === LEAVE_TYPES.SICK ? actor.sickLeaveQuota : actor.annualLeaveQuota,
+      usedLeaveDays: usage.usedDays,
     });
 
     const leaveRequest = await LeaveRequestModel.create(
@@ -370,35 +415,28 @@ export async function listAllLeaveRequests(actorUserId, filters = {}) {
   };
 }
 
-async function ensureAnnualBalanceAvailable({ leaveRequest, transaction }) {
-  if (leaveRequest.leaveType !== LEAVE_TYPES.ANNUAL) {
-    return;
-  }
-
+async function ensureLeaveBalanceAvailable({ leaveRequest, transaction }) {
   const employee = await UserModel.findByPk(leaveRequest.employeeId, {
-    attributes: ['id', 'annualLeaveQuota'],
+    attributes: ['id', 'annualLeaveQuota', 'sickLeaveQuota'],
     transaction,
   });
-  const balance = await calculateApprovedAnnualLeaveUsed({
+  const balance = await calculateApprovedLeaveUsed({
     employeeId: leaveRequest.employeeId,
+    leaveType: leaveRequest.leaveType,
     transaction,
   });
-  const quota = Number(employee.annualLeaveQuota);
-  const remaining = Number((quota - balance.usedDays).toFixed(1));
 
-  if (leaveRequest.durationDays > remaining) {
-    throw new ApiError(
-      400,
-      'Employee does not have enough annual leave balance for this approval',
-      'INSUFFICIENT_LEAVE_BALANCE',
-      {
-        annualLeaveQuota: quota,
-        usedAnnualLeaveDays: balance.usedDays,
-        requestedDurationDays: Number(leaveRequest.durationDays),
-        remainingAnnualLeaveDays: remaining,
-      },
-    );
-  }
+  assertLeaveRequestWithinBalance({
+    leaveType: leaveRequest.leaveType,
+    requestedDurationDays: leaveRequest.durationDays,
+    leaveQuota:
+      leaveRequest.leaveType === LEAVE_TYPES.SICK ? employee.sickLeaveQuota : employee.annualLeaveQuota,
+    usedLeaveDays: balance.usedDays,
+    errorMessage:
+      leaveRequest.leaveType === LEAVE_TYPES.SICK
+        ? 'Employee does not have enough sick leave balance for this approval'
+        : 'Employee does not have enough annual leave balance for this approval',
+  });
 }
 
 export async function approveLeaveRequest({ actorUserId, leaveRequestId, decisionComment, request }) {
@@ -409,7 +447,7 @@ export async function approveLeaveRequest({ actorUserId, leaveRequestId, decisio
     const leaveRequest = await getLeaveRequestForDecision(leaveRequestId, transaction);
 
     ensureDecisionAllowed({ actor, leaveRequest });
-    await ensureAnnualBalanceAvailable({ leaveRequest, transaction });
+    await ensureLeaveBalanceAvailable({ leaveRequest, transaction });
 
     await leaveRequest.update(
       {

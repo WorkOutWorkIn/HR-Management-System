@@ -18,6 +18,7 @@ const ADMIN_EDITABLE_FIELDS = [
   'status',
   'managerUserId',
   'annualLeaveQuota',
+  'sickLeaveQuota',
 ];
 
 export async function listEmployees({ search, role, status }) {
@@ -108,6 +109,7 @@ export async function createEmployee({ actorUserId, payload, request }) {
         createdByUserId: actor.id,
         managerUserId,
         annualLeaveQuota: payload.annualLeaveQuota ?? 14,
+        sickLeaveQuota: payload.sickLeaveQuota ?? 14,
         department: payload.department || null,
         jobTitle: payload.jobTitle || null,
       },

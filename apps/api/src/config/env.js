@@ -1,6 +1,13 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({
+  path: path.resolve(__dirname, '..', '..', '.env'),
+});
 
 function getString(name, fallback = '') {
   const value = process.env[name];
@@ -57,7 +64,7 @@ const env = {
   db: {
     host: getString('DB_HOST', '127.0.0.1'),
     port: getNumber('DB_PORT', 3306),
-    name: getString('DB_NAME', 'secure_hrms'),
+    name: getString('DB_NAME', 'secure_hrms_local'),
     user: getString('DB_USER', 'root'),
     password: getString('DB_PASSWORD', ''),
     logging: getBoolean('DB_LOGGING', false),

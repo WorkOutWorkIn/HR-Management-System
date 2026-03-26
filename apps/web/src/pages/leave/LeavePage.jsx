@@ -32,6 +32,12 @@ import {
   listPublicHolidays,
   rejectLeaveRequest,
 } from '@/services/leave/leave.api';
+import { formatLeaveDisplayDateRange, formatLeaveDurationLabel } from './leave-display.utils';
+import {
+  getDayPortionOptions,
+  getLeaveRequestFormState,
+  normalizeDayPortionForDateRange,
+} from './leave-form.utils';
 
 const leaveRequestSchema = z
   .object({
@@ -45,15 +51,12 @@ const leaveRequestSchema = z
       .max(500, 'Reason must be 500 characters or fewer')
       .optional()
       .or(z.literal('')),
-    startDayPortion: z.enum(
+    dayPortion: z.enum(
       [LEAVE_DAY_PORTIONS.FULL, LEAVE_DAY_PORTIONS.AM, LEAVE_DAY_PORTIONS.PM],
       {
-        required_error: 'Start day portion is required',
+        required_error: 'Start/End day portion is required',
       },
     ),
-    endDayPortion: z.enum([LEAVE_DAY_PORTIONS.FULL, LEAVE_DAY_PORTIONS.AM, LEAVE_DAY_PORTIONS.PM], {
-      required_error: 'End day portion is required',
-    }),
   })
   .refine((values) => values.endDate >= values.startDate, {
     path: ['endDate'],
@@ -70,15 +73,20 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
 });
 
-function formatLeaveDateRange(leaveRequest) {
-  const sameDay = leaveRequest.startDate === leaveRequest.endDate;
-
-  if (sameDay) {
-    return leaveRequest.startDate;
-  }
-
-  return `${leaveRequest.startDate} to ${leaveRequest.endDate}`;
-}
+const leaveTypeDisplayConfig = {
+  [LEAVE_TYPES.ANNUAL]: {
+    title: 'Annual leave balance',
+    quotaLabel: 'Annual leave quota',
+    usedLabel: 'Approved annual leave used',
+    remainingLabel: 'Remaining annual leave',
+  },
+  [LEAVE_TYPES.SICK]: {
+    title: 'Sick leave balance',
+    quotaLabel: 'Sick leave quota',
+    usedLabel: 'Approved sick leave used',
+    remainingLabel: 'Remaining sick leave',
+  },
+};
 
 function getStatusTone(status) {
   if (status === LEAVE_REQUEST_STATUSES.APPROVED) {
@@ -90,6 +98,16 @@ function getStatusTone(status) {
   }
 
   return 'warning';
+}
+
+function getLeaveHistorySortValue(leaveRequest) {
+  return (
+    leaveRequest?.createdAt ||
+    leaveRequest?.updatedAt ||
+    leaveRequest?.decidedAt ||
+    leaveRequest?.startDate ||
+    ''
+  );
 }
 
 function LeaveRequestCard({ leaveRequest, actions }) {
@@ -117,9 +135,19 @@ function LeaveRequestCard({ leaveRequest, actions }) {
               {leaveRequest.employee.fullName} ({leaveRequest.employee.workEmail})
             </p>
           ) : null}
-          <p className="text-sm text-slate-300">{formatLeaveDateRange(leaveRequest)}</p>
+          <p className="text-sm text-slate-300">
+            {formatLeaveDisplayDateRange({
+              startDate: leaveRequest.startDate,
+              endDate: leaveRequest.endDate,
+            })}
+          </p>
           <p className="text-sm text-slate-400">
-            Duration: {currencyFormatter.format(leaveRequest.durationDays)} day(s)
+            Duration:{' '}
+            {formatLeaveDurationLabel({
+              durationDays: currencyFormatter.format(leaveRequest.durationDays),
+              startDayPortion: leaveRequest.startDayPortion,
+              endDayPortion: leaveRequest.endDayPortion,
+            })}
           </p>
           {leaveRequest.reason ? (
             <p className="text-sm text-slate-300">{leaveRequest.reason}</p>
@@ -160,8 +188,7 @@ export function LeavePage() {
       startDate: '',
       endDate: '',
       reason: '',
-      startDayPortion: LEAVE_DAY_PORTIONS.FULL,
-      endDayPortion: LEAVE_DAY_PORTIONS.FULL,
+      dayPortion: LEAVE_DAY_PORTIONS.FULL,
     },
   });
   const {
@@ -174,8 +201,42 @@ export function LeavePage() {
   });
 
   const watchedLeaveType = watch('leaveType');
-  const watchedStartDayPortion = watch('startDayPortion');
-  const watchedEndDayPortion = watch('endDayPortion');
+  const watchedStartDate = watch('startDate');
+  const watchedEndDate = watch('endDate');
+  const watchedDayPortion = watch('dayPortion');
+  const selectedBalance = balance?.balances?.[watchedLeaveType] || null;
+  const balanceDisplay = leaveTypeDisplayConfig[watchedLeaveType] || leaveTypeDisplayConfig[LEAVE_TYPES.ANNUAL];
+  const dayPortionOptions = useMemo(
+    () =>
+      getDayPortionOptions({
+        leaveType: watchedLeaveType,
+        startDate: watchedStartDate,
+        endDate: watchedEndDate,
+      }),
+    [watchedEndDate, watchedLeaveType, watchedStartDate],
+  );
+  const leaveRequestFormState = useMemo(
+    () =>
+      getLeaveRequestFormState({
+        leaveType: watchedLeaveType,
+        startDate: watchedStartDate,
+        endDate: watchedEndDate,
+        dayPortion: watchedDayPortion,
+        remainingAnnualLeaveDays: selectedBalance?.remainingDays,
+        publicHolidays,
+      }),
+    [
+      watchedDayPortion,
+      publicHolidays,
+      watchedEndDate,
+      watchedLeaveType,
+      watchedStartDate,
+      selectedBalance?.remainingDays,
+    ],
+  );
+  const leaveFormInlineError =
+    leaveRequestFormState.durationError || leaveRequestFormState.balanceError || null;
+  const isSubmitBlocked = leaveRequestFormState.isSubmitBlocked;
 
   const loadLeaveData = useCallback(async () => {
     setLoading(true);
@@ -204,6 +265,22 @@ export function LeavePage() {
     loadLeaveData();
   }, [loadLeaveData]);
 
+  useEffect(() => {
+    const normalizedDayPortion = normalizeDayPortionForDateRange({
+      leaveType: watchedLeaveType,
+      startDate: watchedStartDate,
+      endDate: watchedEndDate,
+      dayPortion: watchedDayPortion,
+    });
+
+    if (normalizedDayPortion !== watchedDayPortion) {
+      setValue('dayPortion', normalizedDayPortion, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [setValue, watchedDayPortion, watchedEndDate, watchedLeaveType, watchedStartDate]);
+
   const onSubmit = handleSubmit(async (values) => {
     setNotice(null);
     setErrorMessage(null);
@@ -214,8 +291,8 @@ export function LeavePage() {
         startDate: values.startDate,
         endDate: values.endDate,
         reason: values.reason || undefined,
-        startDayPortion: values.startDayPortion,
-        endDayPortion: values.endDayPortion,
+        startDayPortion: values.dayPortion,
+        endDayPortion: values.dayPortion,
       });
       setNotice('Leave request submitted successfully.');
       reset({
@@ -223,8 +300,7 @@ export function LeavePage() {
         startDate: '',
         endDate: '',
         reason: '',
-        startDayPortion: LEAVE_DAY_PORTIONS.FULL,
-        endDayPortion: LEAVE_DAY_PORTIONS.FULL,
+        dayPortion: LEAVE_DAY_PORTIONS.FULL,
       });
       await loadLeaveData();
     } catch (error) {
@@ -290,7 +366,10 @@ export function LeavePage() {
   }
 
   const sortedHistory = useMemo(
-    () => [...history].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    () =>
+      [...history].sort((left, right) =>
+        getLeaveHistorySortValue(right).localeCompare(getLeaveHistorySortValue(left)),
+      ),
     [history],
   );
 
@@ -309,31 +388,31 @@ export function LeavePage() {
         </NoticeBanner>
       ) : null}
 
-      {balance ? (
+      {selectedBalance ? (
         <Card className="border border-slate-800 bg-slate-900/80">
           <CardHeader className="flex flex-col items-start gap-2">
-            <h2 className="text-2xl font-semibold text-white">Annual leave balance</h2>
+            <h2 className="text-2xl font-semibold text-white">{balanceDisplay.title}</h2>
           </CardHeader>
           <CardBody className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-sm text-slate-400">Annual quota</p>
+              <p className="text-sm text-slate-400">{balanceDisplay.quotaLabel}</p>
               <p className="mt-2 text-3xl font-semibold text-white">
-                {currencyFormatter.format(balance.annualLeaveQuota)}
+                {currencyFormatter.format(selectedBalance.quota)}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-sm text-slate-400">Approved annual leave used</p>
+              <p className="text-sm text-slate-400">{balanceDisplay.usedLabel}</p>
               <p className="mt-2 text-3xl font-semibold text-white">
-                {currencyFormatter.format(balance.usedAnnualLeaveDays)}
+                {currencyFormatter.format(selectedBalance.usedDays)}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-sm text-slate-400">Remaining annual leave</p>
+              <p className="text-sm text-slate-400">{balanceDisplay.remainingLabel}</p>
               <p className="mt-2 text-3xl font-semibold text-white">
-                {currencyFormatter.format(balance.remainingAnnualLeaveDays)}
+                {currencyFormatter.format(selectedBalance.remainingDays)}
               </p>
             </div>
-            <p className="md:col-span-3 text-sm text-slate-400">{balance.deductionPolicy}</p>
+            <p className="md:col-span-3 text-sm text-slate-400">{selectedBalance.deductionPolicy}</p>
           </CardBody>
         </Card>
       ) : null}
@@ -343,75 +422,64 @@ export function LeavePage() {
           <h2 className="text-2xl font-semibold text-white">Apply for leave</h2>
         </CardHeader>
         <CardBody className="space-y-4">
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-            <label className="space-y-2 text-sm text-slate-200">
-              <span className="block">Leave type</span>
-              <select
-                className="app-select"
-                value={watchedLeaveType}
-                onChange={(event) =>
-                  setValue('leaveType', event.target.value, { shouldValidate: true })
-                }
-              >
-                <option value={LEAVE_TYPES.ANNUAL}>Annual Leave</option>
-                <option value={LEAVE_TYPES.SICK}>Sick Leave</option>
-              </select>
-              {errors.leaveType ? (
-                <span className="block text-xs text-rose-400">{errors.leaveType.message}</span>
-              ) : null}
-            </label>
-            <TextField fullWidth isInvalid={Boolean(errors.startDate)} name="startDate" type="date">
-              <Label>Start date</Label>
-              <Input {...register('startDate')} />
-              {errors.startDate ? <FieldError>{errors.startDate.message}</FieldError> : null}
-            </TextField>
-            <TextField fullWidth isInvalid={Boolean(errors.endDate)} name="endDate" type="date">
-              <Label>End date</Label>
-              <Input {...register('endDate')} />
-              {errors.endDate ? <FieldError>{errors.endDate.message}</FieldError> : null}
-            </TextField>
-            <label className="space-y-2 text-sm text-slate-200">
-              <span className="block">Start day portion</span>
-              <select
-                className="app-select"
-                value={watchedStartDayPortion}
-                onChange={(event) =>
-                  setValue('startDayPortion', event.target.value, { shouldValidate: true })
-                }
-              >
-                <option value={LEAVE_DAY_PORTIONS.FULL}>Full day</option>
-                <option value={LEAVE_DAY_PORTIONS.AM}>Half day (AM)</option>
-                <option value={LEAVE_DAY_PORTIONS.PM}>Half day (PM)</option>
-              </select>
-              {errors.startDayPortion ? (
-                <span className="block text-xs text-rose-400">
-                  {errors.startDayPortion.message}
-                </span>
-              ) : null}
-            </label>
-            <label className="space-y-2 text-sm text-slate-200 md:col-span-2">
-              <span className="block">End day portion</span>
-              <select
-                className="app-select"
-                value={watchedEndDayPortion}
-                onChange={(event) =>
-                  setValue('endDayPortion', event.target.value, { shouldValidate: true })
-                }
-              >
-                <option value={LEAVE_DAY_PORTIONS.FULL}>Full day</option>
-                <option value={LEAVE_DAY_PORTIONS.AM}>Half day (AM)</option>
-                <option value={LEAVE_DAY_PORTIONS.PM}>Half day (PM)</option>
-              </select>
-              {errors.endDayPortion ? (
-                <span className="block text-xs text-rose-400">{errors.endDayPortion.message}</span>
-              ) : null}
-            </label>
-            <TextField
-              className="md:col-span-2"
-              fullWidth
-              isInvalid={Boolean(errors.reason)}
-              name="reason"
-            >
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="grid gap-4">
+              <label className="space-y-2 text-sm text-slate-200">
+                <span className="block">Leave type</span>
+                <select
+                  className="app-select"
+                  value={watchedLeaveType}
+                  onChange={(event) =>
+                    setValue('leaveType', event.target.value, { shouldValidate: true })
+                  }
+                >
+                  <option value={LEAVE_TYPES.ANNUAL}>Annual Leave</option>
+                  <option value={LEAVE_TYPES.SICK}>Sick Leave</option>
+                </select>
+                {errors.leaveType ? (
+                  <span className="block text-xs text-rose-400">{errors.leaveType.message}</span>
+                ) : null}
+              </label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TextField fullWidth isInvalid={Boolean(errors.startDate)} name="startDate" type="date">
+                <Label>Start date</Label>
+                <Input {...register('startDate')} />
+                {errors.startDate ? <FieldError>{errors.startDate.message}</FieldError> : null}
+              </TextField>
+              <TextField fullWidth isInvalid={Boolean(errors.endDate)} name="endDate" type="date">
+                <Label>End date</Label>
+                <Input {...register('endDate')} />
+                {errors.endDate ? <FieldError>{errors.endDate.message}</FieldError> : null}
+              </TextField>
+            </div>
+            <div className="grid gap-4">
+              <label className="space-y-2 text-sm text-slate-200">
+                <span className="block">Start/End day portion</span>
+                <select
+                  className="app-select"
+                  value={watchedDayPortion}
+                  onChange={(event) => setValue('dayPortion', event.target.value, { shouldValidate: true })}
+                >
+                  {dayPortionOptions.map((option) => (
+                    <option key={option.value} value={option.value} disabled={option.disabled}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.dayPortion ? (
+                  <span className="block text-xs text-rose-400">
+                    {errors.dayPortion.message}
+                  </span>
+                ) : null}
+                {watchedStartDate && watchedEndDate && watchedStartDate !== watchedEndDate ? (
+                  <span className="block text-xs text-slate-500">
+                    Half-day AM/PM is only available for same-day leave requests.
+                  </span>
+                ) : null}
+              </label>
+            </div>
+            <TextField fullWidth isInvalid={Boolean(errors.reason)} name="reason">
               <Label>Reason (optional)</Label>
               <TextArea minRows={3} {...register('reason')} />
               {errors.reason ? <FieldError>{errors.reason.message}</FieldError> : null}
@@ -419,8 +487,34 @@ export function LeavePage() {
                 <Description>Add context if the approver needs more detail.</Description>
               ) : null}
             </TextField>
-            <div className="md:col-span-2">
-              <Button color="primary" isLoading={isSubmitting} radius="lg" type="submit" variant="solid">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-sm text-slate-400">Requested duration</p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {leaveRequestFormState.durationDays === null
+                  ? 'Select dates to calculate'
+                  : `${currencyFormatter.format(leaveRequestFormState.durationDays)} day(s)`}
+              </p>
+              {selectedBalance ? (
+                <p className="mt-2 text-sm text-slate-400">
+                  {balanceDisplay.remainingLabel}: {currencyFormatter.format(selectedBalance.remainingDays)} day(s)
+                </p>
+              ) : null}
+              <p className="mt-2 text-sm text-slate-500">
+                Duration is based on working days. Weekends and configured public holidays are excluded.
+              </p>
+              {leaveFormInlineError ? (
+                <p className="mt-2 text-sm text-rose-400">{leaveFormInlineError}</p>
+              ) : null}
+            </div>
+            <div>
+              <Button
+                color="primary"
+                isDisabled={isSubmitBlocked}
+                isLoading={isSubmitting}
+                radius="lg"
+                type="submit"
+                variant="solid"
+              >
                 Submit leave request
               </Button>
             </div>
