@@ -14,7 +14,7 @@ export function PublicOnlyRoute({ children }) {
     return (
       <Navigate
         replace
-        to={user?.mustChangePassword ? APP_ROUTES.SETUP_PASSWORD : APP_ROUTES.DASHBOARD}
+        to={user?.mustChangePassword ? APP_ROUTES.SETUP_PASSWORD : APP_ROUTES.PROFILE}
       />
     );
   }

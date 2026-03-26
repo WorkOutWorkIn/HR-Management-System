@@ -59,6 +59,42 @@ function buildGenericForgotPasswordResponse() {
   };
 }
 
+function createInvalidCredentialsError() {
+  return new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
+}
+
+function createInvalidRefreshTokenError() {
+  return new ApiError(401, 'Invalid refresh token', 'INVALID_REFRESH_TOKEN');
+}
+
+async function writeAccountStatusChangeAudit({
+  request,
+  actorUserId,
+  targetUserId,
+  previousStatus,
+  nextStatus,
+  metadata = {},
+  transaction,
+}) {
+  if (!previousStatus || !nextStatus || previousStatus === nextStatus) {
+    return;
+  }
+
+  await writeAuditLog(
+    buildAuditBase(request, {
+      actorUserId,
+      targetUserId,
+      action: AUDIT_ACTIONS.ACCOUNT_STATUS_CHANGED,
+      metadata: {
+        previousStatus,
+        nextStatus,
+        ...metadata,
+      },
+    }),
+    { transaction },
+  );
+}
+
 async function revokeRefreshTokensForUser(userId, reason, transaction) {
   await RefreshTokenModel.update(
     {
@@ -68,6 +104,23 @@ async function revokeRefreshTokensForUser(userId, reason, transaction) {
     {
       where: {
         userId,
+        revokedAt: null,
+      },
+      transaction,
+    },
+  );
+}
+
+async function revokeRefreshTokenFamily({ userId, familyId, reason, transaction }) {
+  await RefreshTokenModel.update(
+    {
+      revokedAt: new Date(),
+      revokedReason: reason,
+    },
+    {
+      where: {
+        userId,
+        familyId,
         revokedAt: null,
       },
       transaction,
@@ -95,9 +148,9 @@ async function invalidateOutstandingPasswordTokens(userId, purpose, transaction)
   );
 }
 
-async function createRefreshSession(user, request, transaction) {
+async function createRefreshSession(user, request, transaction, options = {}) {
   const tokenId = generateTokenId();
-  const familyId = generateTokenId();
+  const familyId = options.familyId || generateTokenId();
   const refreshToken = signRefreshToken({ user, tokenId });
   const refreshTokenHash = hashOpaqueToken(refreshToken);
   const refreshTokenExpiresAt = new Date(Date.now() + ttlToMilliseconds(env.jwt.refreshTokenTtl));
@@ -121,6 +174,7 @@ async function createRefreshSession(user, request, transaction) {
 
   return {
     accessToken: signAccessToken(user),
+    tokenId,
     refreshToken,
   };
 }
@@ -129,10 +183,36 @@ async function markLoginFailure(user, request, reason) {
   const transaction = await sequelize.transaction();
 
   try {
-    const nextAttempts = user.failedLoginAttempts + 1;
-    const shouldLock = nextAttempts >= env.security.maxFailedLoginAttempts;
+    const lockedUser = await UserModel.findByPk(user.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
-    await user.update(
+    if (!lockedUser) {
+      await transaction.commit();
+      return;
+    }
+
+    if (lockedUser.status === ACCOUNT_STATUSES.LOCKED) {
+      await writeAuditLog(
+        buildAuditBase(request, {
+          actorUserId: lockedUser.id,
+          targetUserId: lockedUser.id,
+          action: AUDIT_ACTIONS.LOGIN_FAILURE,
+          metadata: { reason: 'ACCOUNT_LOCKED' },
+        }),
+        { transaction },
+      );
+
+      await transaction.commit();
+      return;
+    }
+
+    const nextAttempts = lockedUser.failedLoginAttempts + 1;
+    const shouldLock = nextAttempts >= env.security.maxFailedLoginAttempts;
+    const previousStatus = lockedUser.status;
+
+    await lockedUser.update(
       {
         failedLoginAttempts: nextAttempts,
         ...(shouldLock
@@ -158,13 +238,23 @@ async function markLoginFailure(user, request, reason) {
     if (shouldLock) {
       await writeAuditLog(
         buildAuditBase(request, {
-          actorUserId: user.id,
-          targetUserId: user.id,
+          actorUserId: lockedUser.id,
+          targetUserId: lockedUser.id,
           action: AUDIT_ACTIONS.ACCOUNT_LOCKED,
           metadata: { reason: 'MAX_FAILED_LOGIN_ATTEMPTS' },
         }),
         { transaction },
       );
+
+      await writeAccountStatusChangeAudit({
+        request,
+        actorUserId: lockedUser.id,
+        targetUserId: lockedUser.id,
+        previousStatus,
+        nextStatus: ACCOUNT_STATUSES.LOCKED,
+        metadata: { reason: 'MAX_FAILED_LOGIN_ATTEMPTS' },
+        transaction,
+      });
     }
 
     await transaction.commit();
@@ -238,29 +328,29 @@ export async function login({ workEmail, password, request }) {
       }),
     );
 
-    throw new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
+    throw createInvalidCredentialsError();
   }
 
   if (user.status === ACCOUNT_STATUSES.DISABLED) {
     await logBlockedLoginAttempt(user, request, 'ACCOUNT_DISABLED');
-    throw new ApiError(403, 'Account is disabled', 'ACCOUNT_DISABLED');
+    throw createInvalidCredentialsError();
   }
 
   if (user.status === ACCOUNT_STATUSES.LOCKED) {
     await logBlockedLoginAttempt(user, request, 'ACCOUNT_LOCKED');
-    throw new ApiError(423, 'Account is locked', 'ACCOUNT_LOCKED');
+    throw createInvalidCredentialsError();
   }
 
   if (!LOGIN_ALLOWED_STATUSES.includes(user.status)) {
     await logBlockedLoginAttempt(user, request, 'STATUS_NOT_ALLOWED');
-    throw new ApiError(403, 'Account is not ready for sign-in', 'ACCOUNT_NOT_READY');
+    throw createInvalidCredentialsError();
   }
 
   const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
   if (!isPasswordValid) {
     await markLoginFailure(user, request, 'INVALID_CREDENTIALS');
-    throw new ApiError(401, 'Invalid credentials', 'INVALID_CREDENTIALS');
+    throw createInvalidCredentialsError();
   }
 
   const transaction = await sequelize.transaction();
@@ -302,7 +392,7 @@ export async function login({ workEmail, password, request }) {
   }
 }
 
-export async function refreshSession({ refreshToken }) {
+export async function refreshSession({ refreshToken, request }) {
   if (!refreshToken) {
     throw new ApiError(401, 'Refresh token is required', 'REFRESH_REQUIRED');
   }
@@ -312,34 +402,89 @@ export async function refreshSession({ refreshToken }) {
   try {
     decoded = verifyRefreshToken(refreshToken);
   } catch {
-    throw new ApiError(401, 'Invalid refresh token', 'INVALID_REFRESH_TOKEN');
+    throw createInvalidRefreshTokenError();
   }
+  const tokenHash = hashOpaqueToken(refreshToken);
+  const now = new Date();
+  const transaction = await sequelize.transaction();
 
-  const tokenRecord = await RefreshTokenModel.findOne({
-    where: {
-      tokenId: decoded.jti,
-      tokenHash: hashOpaqueToken(refreshToken),
-      revokedAt: null,
-      expiresAt: {
-        [Op.gt]: new Date(),
+  try {
+    const tokenRecord = await RefreshTokenModel.findOne({
+      where: {
+        tokenId: decoded.jti,
       },
-    },
-    include: [{ model: UserModel, as: 'user' }],
-  });
+      include: [{ model: UserModel, as: 'user' }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
-  if (!tokenRecord?.user || !LOGIN_ALLOWED_STATUSES.includes(tokenRecord.user.status)) {
-    throw new ApiError(401, 'Invalid refresh token', 'INVALID_REFRESH_TOKEN');
+    if (!tokenRecord?.user || tokenRecord.userId !== decoded.sub || tokenRecord.tokenHash !== tokenHash) {
+      throw createInvalidRefreshTokenError();
+    }
+
+    if (tokenRecord.revokedAt) {
+      if (
+        tokenRecord.replacedByTokenId ||
+        tokenRecord.revokedReason === 'ROTATED' ||
+        tokenRecord.revokedReason === 'TOKEN_REUSE_DETECTED'
+      ) {
+        await revokeRefreshTokenFamily({
+          userId: tokenRecord.userId,
+          familyId: tokenRecord.familyId,
+          reason: 'TOKEN_REUSE_DETECTED',
+          transaction,
+        });
+      }
+
+      await transaction.commit();
+      throw createInvalidRefreshTokenError();
+    }
+
+    if (tokenRecord.expiresAt <= now) {
+      await tokenRecord.update(
+        {
+          revokedAt: now,
+          revokedReason: 'EXPIRED',
+        },
+        { transaction },
+      );
+
+      await transaction.commit();
+      throw createInvalidRefreshTokenError();
+    }
+
+    if (!LOGIN_ALLOWED_STATUSES.includes(tokenRecord.user.status)) {
+      throw createInvalidRefreshTokenError();
+    }
+
+    const nextSession = await createRefreshSession(tokenRecord.user, request, transaction, {
+      familyId: tokenRecord.familyId,
+    });
+
+    await tokenRecord.update(
+      {
+        lastUsedAt: now,
+        revokedAt: now,
+        revokedReason: 'ROTATED',
+        replacedByTokenId: nextSession.tokenId,
+      },
+      { transaction },
+    );
+
+    await transaction.commit();
+
+    return {
+      accessToken: nextSession.accessToken,
+      refreshToken: nextSession.refreshToken,
+      user: serializeUser(tokenRecord.user),
+    };
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
+    throw error;
   }
-
-  await tokenRecord.update({
-    lastUsedAt: new Date(),
-  });
-
-  return {
-    accessToken: signAccessToken(tokenRecord.user),
-    refreshToken,
-    user: serializeUser(tokenRecord.user),
-  };
 }
 
 export async function logout({ refreshToken, request }) {
@@ -445,6 +590,8 @@ export async function resetPassword({ token, newPassword, request }) {
       throw new ApiError(400, 'Reset token is invalid or expired', 'INVALID_RESET_TOKEN');
     }
 
+    const previousStatus = passwordToken.user.status;
+
     if (passwordToken.user.passwordHash) {
       const isReusedPassword = await verifyPassword(newPassword, passwordToken.user.passwordHash);
 
@@ -490,6 +637,16 @@ export async function resetPassword({ token, newPassword, request }) {
     );
 
     await revokeRefreshTokensForUser(passwordToken.user.id, 'PASSWORD_RESET', transaction);
+
+    await writeAccountStatusChangeAudit({
+      request,
+      actorUserId: passwordToken.user.id,
+      targetUserId: passwordToken.user.id,
+      previousStatus,
+      nextStatus: passwordToken.user.status,
+      metadata: { reason: 'PASSWORD_RESET' },
+      transaction,
+    });
 
     await writeAuditLog(
       buildAuditBase(request, {
@@ -543,6 +700,8 @@ export async function changePassword({ userId, oldPassword, newPassword, request
   const transaction = await sequelize.transaction();
 
   try {
+    const previousStatus = user.status;
+
     await updateUserPassword({
       user,
       newPassword,
@@ -557,6 +716,16 @@ export async function changePassword({ userId, oldPassword, newPassword, request
       transaction,
     );
     await revokeRefreshTokensForUser(user.id, 'PASSWORD_CHANGE', transaction);
+
+    await writeAccountStatusChangeAudit({
+      request,
+      actorUserId: user.id,
+      targetUserId: user.id,
+      previousStatus,
+      nextStatus: user.status,
+      metadata: { reason: 'PASSWORD_CHANGE' },
+      transaction,
+    });
 
     await writeAuditLog(
       buildAuditBase(request, {
@@ -617,6 +786,8 @@ export async function completeFirstLoginPasswordReset({ userId, newPassword, req
   const transaction = await sequelize.transaction();
 
   try {
+    const previousStatus = user.status;
+
     await updateUserPassword({
       user,
       newPassword,
@@ -633,6 +804,16 @@ export async function completeFirstLoginPasswordReset({ userId, newPassword, req
     await revokeRefreshTokensForUser(user.id, 'FIRST_LOGIN_PASSWORD_RESET', transaction);
     const refreshedUser = await user.reload({ transaction });
     const tokens = await createRefreshSession(refreshedUser, request, transaction);
+
+    await writeAccountStatusChangeAudit({
+      request,
+      actorUserId: refreshedUser.id,
+      targetUserId: refreshedUser.id,
+      previousStatus,
+      nextStatus: refreshedUser.status,
+      metadata: { reason: 'FIRST_LOGIN_PASSWORD_RESET' },
+      transaction,
+    });
 
     await writeAuditLog(
       buildAuditBase(request, {

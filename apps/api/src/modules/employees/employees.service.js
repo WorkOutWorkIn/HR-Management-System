@@ -231,6 +231,14 @@ export async function updateEmployee({ actorUserId, employeeId, payload, request
     ]),
   );
 
+  if (employee.status === ACCOUNT_STATUSES.LOCKED && updates.status === ACCOUNT_STATUSES.ACTIVE) {
+    throw new ApiError(
+      400,
+      'Locked accounts must be unlocked with the dedicated unlock action',
+      'ACCOUNT_UNLOCK_ACTION_REQUIRED',
+    );
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
@@ -304,14 +312,36 @@ export async function unlockEmployee({ actorUserId, employeeId, request }) {
     throw new ApiError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
   }
 
+  if (employee.status !== ACCOUNT_STATUSES.LOCKED) {
+    throw new ApiError(400, 'Only locked accounts can be unlocked', 'ACCOUNT_NOT_LOCKED');
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
+    const previousStatus = employee.status;
+
     await employee.update(
       {
         status: ACCOUNT_STATUSES.ACTIVE,
         failedLoginAttempts: 0,
         lockedAt: null,
+      },
+      { transaction },
+    );
+
+    await writeAuditLog(
+      {
+        actorUserId: actor.id,
+        targetUserId: employee.id,
+        action: AUDIT_ACTIONS.ACCOUNT_STATUS_CHANGED,
+        ipAddress: request.requestContext?.ipAddress || request.ip || null,
+        userAgent: request.requestContext?.userAgent || request.get('user-agent') || null,
+        metadata: {
+          previousStatus,
+          nextStatus: ACCOUNT_STATUSES.ACTIVE,
+          reason: 'ADMIN_UNLOCK',
+        },
       },
       { transaction },
     );

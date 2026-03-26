@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import auditTrailRoutes from '../modules/audit-trail/audit-trail.routes.js';
 import healthRoutes from './health.routes.js';
 import authRoutes from '../modules/auth/auth.routes.js';
 import employeesRoutes from '../modules/employees/employees.routes.js';
@@ -13,6 +14,7 @@ import salaryRoutes from '../modules/salary/salary.routes.js';
 const router = Router();
 
 router.use('/health', healthRoutes);
+router.use('/audit-trail', auditTrailRoutes);
 router.use('/auth', authRoutes);
 router.use('/employees', employeesRoutes);
 router.use('/profile', profileRoutes);

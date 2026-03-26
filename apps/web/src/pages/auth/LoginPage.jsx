@@ -25,7 +25,7 @@ export function LoginPage() {
       ? requestedRedirect
       : null) ||
     location.state?.from?.pathname ||
-    APP_ROUTES.DASHBOARD;
+    APP_ROUTES.PROFILE;
   const {
     formState: { errors, isSubmitting },
     handleSubmit,

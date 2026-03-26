@@ -2,12 +2,6 @@ import { APP_ROUTES, ROLES } from '@hrms/shared';
 
 export const moduleRegistry = Object.freeze([
   {
-    key: 'dashboard',
-    href: APP_ROUTES.DASHBOARD,
-    label: 'Dashboard',
-    placeholder: false,
-  },
-  {
     key: 'profile',
     href: APP_ROUTES.PROFILE,
     label: 'My Profile',
@@ -30,6 +24,13 @@ export const moduleRegistry = Object.freeze([
     key: 'org-chart',
     href: APP_ROUTES.ORG_CHART,
     label: 'Org Chart',
+    placeholder: false,
+  },
+  {
+    key: 'audit-trail',
+    href: APP_ROUTES.AUDIT_TRAIL,
+    label: 'Audit Trail',
+    allowedRoles: [ROLES.ADMIN],
     placeholder: false,
   },
   {

@@ -9,7 +9,7 @@ import { EmployeeDetailPage } from '@/pages/employees/EmployeeDetailPage';
 import { EmployeeListPage } from '@/pages/employees/EmployeeListPage';
 import { FirstTimePasswordPage } from '@/pages/auth/FirstTimePasswordPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
-import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { AuditTrailPage } from '@/pages/audit/AuditTrailPage';
 import { LeavePage } from '@/pages/leave/LeavePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { OrgChartPage } from '@/pages/org-chart/OrgChartPage';
@@ -26,11 +26,11 @@ import { ModulePlaceholderPage } from '@/pages/common/ModulePlaceholderPage';
 const protectedChildren = [
   {
     index: true,
-    element: <Navigate to={APP_ROUTES.DASHBOARD} replace />,
+    element: <Navigate to={APP_ROUTES.PROFILE} replace />,
   },
   {
     path: APP_ROUTES.DASHBOARD.slice(1),
-    element: <DashboardPage />,
+    element: <Navigate to={APP_ROUTES.PROFILE} replace />,
   },
   {
     path: APP_ROUTES.PROFILE.slice(1),
@@ -43,6 +43,14 @@ const protectedChildren = [
   {
     path: APP_ROUTES.ORG_CHART.slice(1),
     element: <OrgChartPage />,
+  },
+  {
+    path: APP_ROUTES.AUDIT_TRAIL.slice(1),
+    element: (
+      <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+        <AuditTrailPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: APP_ROUTES.PERFORMANCE.slice(1),
@@ -145,7 +153,7 @@ export function AppRouter() {
     },
     {
       path: '*',
-      element: <Navigate to={APP_ROUTES.DASHBOARD} replace />,
+      element: <Navigate to={APP_ROUTES.PROFILE} replace />,
     },
   ]);
 }
