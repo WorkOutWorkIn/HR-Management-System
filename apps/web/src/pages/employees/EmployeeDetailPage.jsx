@@ -143,7 +143,7 @@ export function EmployeeDetailPage() {
           <label className="space-y-2 text-sm text-slate-200">
             <span className="block">Role</span>
             <select
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+              className="app-select"
               value={watch('role')}
               onChange={(event) => setValue('role', event.target.value, { shouldValidate: true })}
               disabled={!canManageEmployee}
@@ -159,7 +159,7 @@ export function EmployeeDetailPage() {
           <label className="space-y-2 text-sm text-slate-200">
             <span className="block">Status</span>
             <select
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+              className="app-select"
               value={watch('status')}
               onChange={(event) => setValue('status', event.target.value, { shouldValidate: true })}
               disabled={!canManageEmployee}

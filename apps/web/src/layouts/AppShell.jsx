@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { ROLES, hasAnyRole } from '@hrms/shared';
 import { moduleRegistry } from '@/constants/module-registry';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 
 function MenuIcon() {
   return (
@@ -13,30 +14,19 @@ function MenuIcon() {
   );
 }
 
-function BellIcon() {
+function SunIcon() {
   return (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-      <path d="M15 17H5.5a1 1 0 01-.9-1.45L6 13V9a6 6 0 1112 0v4l1.4 2.55A1 1 0 0118.5 17H15z" />
-      <path d="M10 19a2 2 0 004 0" />
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 2.5v2.3M12 19.2v2.3M4.8 4.8l1.6 1.6M17.6 17.6l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.8 19.2l1.6-1.6M17.6 6.4l1.6-1.6" />
     </svg>
   );
 }
 
-function CogIcon() {
+function MoonIcon() {
   return (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-      <path d="M12 8.5A3.5 3.5 0 1112 15.5 3.5 3.5 0 0112 8.5z" />
-      <path d="M19.4 15a1 1 0 00.2 1.1l.1.1a2 2 0 010 2.8 2 2 0 01-2.8 0l-.1-.1a1 1 0 00-1.1-.2 1 1 0 00-.6.9V20a2 2 0 01-4 0v-.2a1 1 0 00-.7-.9 1 1 0 00-1.1.2l-.1.1a2 2 0 01-2.8 0 2 2 0 010-2.8l.1-.1a1 1 0 00.2-1.1 1 1 0 00-.9-.6H4a2 2 0 010-4h.2a1 1 0 00.9-.7 1 1 0 00-.2-1.1l-.1-.1a2 2 0 010-2.8 2 2 0 012.8 0l.1.1a1 1 0 001.1.2 1 1 0 00.6-.9V4a2 2 0 014 0v.2a1 1 0 00.7.9 1 1 0 001.1-.2l.1-.1a2 2 0 012.8 0 2 2 0 010 2.8l-.1.1a1 1 0 00-.2 1.1 1 1 0 00.9.6H20a2 2 0 010 4h-.2a1 1 0 00-.9.7z" />
-    </svg>
-  );
-}
-
-function HelpIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9.3 9a2.8 2.8 0 115.4 1c0 2-2.7 2.3-2.7 4" />
-      <path d="M12 17h.01" />
+      <path d="M20 15.2A7.5 7.5 0 1110.8 4 8.5 8.5 0 0020 15.2z" />
     </svg>
   );
 }
@@ -116,10 +106,44 @@ function ModuleIcon({ moduleKey }) {
   );
 }
 
+function SidebarNavItem({ item, isExpanded, onNavigate }) {
+  return (
+    <NavLink
+      key={item.href}
+      to={item.href}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        [
+          'group flex items-center gap-4 rounded-2xl px-4 py-3.5 text-base transition-all duration-200',
+          isActive
+            ? 'bg-cyan-400/12 text-cyan-700 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.8)] dark:text-cyan-200'
+            : 'text-[var(--app-muted)] hover:bg-white/[0.04] hover:text-[var(--app-foreground-strong)]',
+          isExpanded ? 'justify-start' : 'justify-center px-3',
+        ].join(' ')
+      }
+      title={item.label}
+    >
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.03] text-current transition group-hover:bg-white/[0.06]">
+        <ModuleIcon moduleKey={item.key} />
+      </span>
+      <span
+        className={[
+          'truncate whitespace-nowrap transition-all duration-200',
+          isExpanded ? 'max-w-[180px] opacity-100 translate-x-0' : 'max-w-0 -translate-x-2 opacity-0',
+        ].join(' ')}
+      >
+        {item.label}
+      </span>
+    </NavLink>
+  );
+}
+
 export function AppShell() {
   const { signOut, user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const visibleModules = useMemo(
     () =>
       moduleRegistry.filter(
@@ -127,13 +151,38 @@ export function AppShell() {
       ),
     [user?.role],
   );
+  const isDesktopSidebarExpanded = isSidebarPinned || isSidebarHovered;
+  const isSidebarExpanded = isSidebarOpen || isDesktopSidebarExpanded;
+  const sidebarWidthClass = isSidebarExpanded ? 'w-[288px]' : 'w-[108px]';
+
+  const closeMobileSidebar = () => setIsSidebarOpen(false);
+
+  const handleDesktopHoverEnter = () => {
+    setIsSidebarHovered(true);
+  };
+
+  const handleDesktopHoverLeave = () => {
+    if (!isSidebarPinned) {
+      setIsSidebarHovered(false);
+    }
+  };
+
+  const handleDesktopFocus = () => {
+    setIsSidebarHovered(true);
+  };
+
+  const handleDesktopBlur = (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget) && !isSidebarPinned) {
+      setIsSidebarHovered(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#061018] text-slate-50">
+    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-foreground)] transition-colors duration-300">
       <div className="flex min-h-screen">
         <div
           className={[
-            'fixed inset-0 z-30 bg-slate-950/65 backdrop-blur-sm transition lg:hidden',
+            'fixed inset-0 z-30 bg-[var(--app-overlay)] backdrop-blur-sm transition lg:hidden',
             isSidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
           ].join(' ')}
           onClick={() => setIsSidebarOpen(false)}
@@ -141,21 +190,61 @@ export function AppShell() {
 
         <aside
           className={[
-            'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/6 bg-[#0b141c]/95 backdrop-blur transition-all duration-300 lg:static lg:z-0',
-            isSidebarCollapsed ? 'w-[92px]' : 'w-[288px]',
+            'fixed inset-y-0 left-0 z-40 flex flex-col overflow-hidden border-r border-[var(--app-border)] bg-[var(--app-sidebar-bg)] backdrop-blur transition-[width,transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:translate-x-0',
+            sidebarWidthClass,
+            isSidebarExpanded ? 'shadow-[18px_0_48px_rgba(2,12,27,0.42)]' : 'shadow-none',
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           ].join(' ')}
+          onBlurCapture={handleDesktopBlur}
+          onFocusCapture={handleDesktopFocus}
+          onMouseEnter={handleDesktopHoverEnter}
+          onMouseLeave={handleDesktopHoverLeave}
         >
-          <div className="flex items-center justify-between border-b border-white/6 px-6 py-6">
-            <div className={isSidebarCollapsed ? 'hidden' : 'block'}>
-              <p className="text-4xl font-semibold tracking-tight text-white">HRMS</p>
+          <div
+            className={[
+              'flex items-center border-b border-[var(--app-border)] py-6',
+              isSidebarExpanded ? 'justify-between px-6' : 'justify-center px-4',
+            ].join(' ')}
+          >
+            <div
+              className={[
+                'overflow-hidden transition-all duration-200',
+                isSidebarExpanded ? 'max-w-[140px] opacity-100' : 'max-w-0 opacity-0',
+              ].join(' ')}
+            >
+              <p className="text-3xl font-semibold tracking-tight text-[var(--app-foreground-strong)]">
+                HRMS
+              </p>
             </div>
             <Button
               isIconOnly
+              aria-label={
+                isSidebarOpen
+                  ? 'Collapse sidebar'
+                  : isSidebarPinned
+                    ? 'Unpin sidebar'
+                    : 'Pin sidebar open'
+              }
+              color="default"
               radius="full"
-              variant="light"
-              className="text-slate-300"
-              onPress={() => setIsSidebarCollapsed((current) => !current)}
+              variant="bordered"
+              aria-pressed={isSidebarPinned}
+              className="text-[var(--app-foreground)]"
+              title={
+                isSidebarOpen
+                  ? 'Collapse sidebar'
+                  : isSidebarPinned
+                    ? 'Unpin sidebar'
+                    : 'Pin sidebar open'
+              }
+              onPress={() => {
+                if (isSidebarOpen) {
+                  setIsSidebarOpen(false);
+                  return;
+                }
+
+                setIsSidebarPinned((current) => !current);
+              }}
             >
               <MenuIcon />
             </Button>
@@ -163,61 +252,53 @@ export function AppShell() {
 
           <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
             {visibleModules.map((item) => (
-              <NavLink
+              <SidebarNavItem
                 key={item.href}
-                to={item.href}
-                onClick={() => setIsSidebarOpen(false)}
-                className={({ isActive }) =>
-                  [
-                    'group flex items-center gap-4 rounded-2xl px-4 py-3.5 text-base transition',
-                    isActive
-                      ? 'bg-cyan-400/12 text-cyan-200 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.8)]'
-                      : 'text-slate-300 hover:bg-white/[0.04] hover:text-white',
-                    isSidebarCollapsed ? 'justify-center px-3' : '',
-                  ].join(' ')
-                }
-                title={item.label}
-              >
-                <span
-                  className={[
-                    'inline-flex h-10 w-10 items-center justify-center rounded-2xl',
-                    'bg-white/[0.03] text-current group-hover:bg-white/[0.06]',
-                  ].join(' ')}
-                >
-                  <ModuleIcon moduleKey={item.key} />
-                </span>
-                {isSidebarCollapsed ? null : <span className="truncate">{item.label}</span>}
-              </NavLink>
+                isExpanded={isSidebarExpanded}
+                item={item}
+                onNavigate={closeMobileSidebar}
+              />
             ))}
           </nav>
 
-          <div className="border-t border-white/6 px-4 py-5">
+          <div className="border-t border-[var(--app-border)] px-4 py-5">
             <button
               type="button"
               onClick={() => signOut()}
               className={[
-                'flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left text-slate-300 transition hover:bg-white/[0.04] hover:text-white',
-                isSidebarCollapsed ? 'justify-center px-3' : '',
+                'flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left text-[var(--app-muted)] transition hover:bg-white/[0.04] hover:text-[var(--app-foreground-strong)]',
+                isSidebarExpanded ? 'justify-start' : 'justify-center px-3',
               ].join(' ')}
               title="Sign out"
             >
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.03]">
                 <LogoutIcon />
               </span>
-              {isSidebarCollapsed ? null : <span>Logout</span>}
+              <span
+                className={[
+                  'truncate whitespace-nowrap transition-all duration-200',
+                  isSidebarExpanded ? 'max-w-[180px] opacity-100 translate-x-0' : 'max-w-0 -translate-x-2 opacity-0',
+                ].join(' ')}
+              >
+                Logout
+              </span>
             </button>
           </div>
         </aside>
 
+        <div className="hidden w-[108px] shrink-0 lg:block" />
+
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-white/6 bg-[#09131b]/88 backdrop-blur">
+          <header className="sticky top-0 z-20 border-b border-[var(--app-border)] bg-[var(--app-header-bg)] backdrop-blur transition-colors duration-300">
             <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-3">
                 <Button
                   isIconOnly
+                  aria-label="Open navigation"
+                  color="default"
                   radius="full"
                   variant="light"
-                  className="text-slate-200 lg:hidden"
+                  className="text-[var(--app-foreground)] lg:hidden"
                   onPress={() => setIsSidebarOpen(true)}
                 >
                   <MenuIcon />
@@ -229,15 +310,36 @@ export function AppShell() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <Button isIconOnly radius="full" variant="light" className="text-slate-300">
+                {/* <Button isIconOnly color="default" radius="full" variant="light">
                   <BellIcon />
+                </Button> */}
+                <Button
+                  color="default"
+                  radius="full"
+                  startContent={isDark ? <SunIcon /> : <MoonIcon />}
+                  variant="bordered"
+                  className="hidden text-[var(--app-foreground)] md:inline-flex"
+                  onPress={toggleTheme}
+                >
+                  {isDark ? 'Light mode' : 'Dark mode'}
                 </Button>
-                <Button isIconOnly radius="full" variant="light" className="text-slate-300">
+                <Button
+                  isIconOnly
+                  aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  color="default"
+                  radius="full"
+                  variant="bordered"
+                  className="text-[var(--app-foreground)] md:hidden"
+                  onPress={toggleTheme}
+                >
+                  {isDark ? <SunIcon /> : <MoonIcon />}
+                </Button>
+                {/* <Button isIconOnly color="default" radius="full" variant="light">
                   <CogIcon />
                 </Button>
-                <Button isIconOnly radius="full" variant="light" className="text-slate-300">
+                <Button isIconOnly color="default" radius="full" variant="light">
                   <HelpIcon />
-                </Button>
+                </Button> */}
                 <Chip
                   color={
                     user?.role === ROLES.ADMIN

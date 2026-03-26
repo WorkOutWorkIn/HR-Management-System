@@ -95,8 +95,8 @@ export function FirstTimePasswordPage() {
             </NoticeBanner>
             <Button
               as={Link}
-              className="w-full"
               color="primary"
+              fullWidth
               to={`${APP_ROUTES.LOGIN}?redirect=${encodeURIComponent(APP_ROUTES.SETUP_PASSWORD)}`}
             >
               Continue to sign in
@@ -149,7 +149,7 @@ export function FirstTimePasswordPage() {
                 <FieldError>{errors.confirmPassword.message}</FieldError>
               ) : null}
             </TextField>
-            <Button className="w-full" color="primary" isLoading={isSubmitting} type="submit">
+            <Button color="primary" fullWidth isLoading={isSubmitting} type="submit">
               Update password and continue
             </Button>
           </form>

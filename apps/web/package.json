@@ -12,10 +12,12 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@heroui/react": "^2.8.10",
     "@hookform/resolvers": "^4.1.3",
-    "@heroui/react": "^2.7.8",
     "@hrms/shared": "0.1.0",
+    "@xyflow/react": "^12.10.1",
     "axios": "^1.8.4",
+    "dagre": "^0.8.5",
     "framer-motion": "^12.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

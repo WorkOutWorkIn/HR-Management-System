@@ -312,7 +312,6 @@ export function LeavePage() {
       {balance ? (
         <Card className="border border-slate-800 bg-slate-900/80">
           <CardHeader className="flex flex-col items-start gap-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Challenge feature</p>
             <h2 className="text-2xl font-semibold text-white">Annual leave balance</h2>
           </CardHeader>
           <CardBody className="grid gap-4 md:grid-cols-3">
@@ -341,7 +340,6 @@ export function LeavePage() {
 
       <Card className="border border-slate-800 bg-slate-900/80">
         <CardHeader className="flex flex-col items-start gap-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Phase 1 foundation</p>
           <h2 className="text-2xl font-semibold text-white">Apply for leave</h2>
         </CardHeader>
         <CardBody className="space-y-4">
@@ -349,7 +347,7 @@ export function LeavePage() {
             <label className="space-y-2 text-sm text-slate-200">
               <span className="block">Leave type</span>
               <select
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                className="app-select"
                 value={watchedLeaveType}
                 onChange={(event) =>
                   setValue('leaveType', event.target.value, { shouldValidate: true })
@@ -375,7 +373,7 @@ export function LeavePage() {
             <label className="space-y-2 text-sm text-slate-200">
               <span className="block">Start day portion</span>
               <select
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                className="app-select"
                 value={watchedStartDayPortion}
                 onChange={(event) =>
                   setValue('startDayPortion', event.target.value, { shouldValidate: true })
@@ -394,7 +392,7 @@ export function LeavePage() {
             <label className="space-y-2 text-sm text-slate-200 md:col-span-2">
               <span className="block">End day portion</span>
               <select
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                className="app-select"
                 value={watchedEndDayPortion}
                 onChange={(event) =>
                   setValue('endDayPortion', event.target.value, { shouldValidate: true })
@@ -422,7 +420,7 @@ export function LeavePage() {
               ) : null}
             </TextField>
             <div className="md:col-span-2">
-              <Button color="primary" isLoading={isSubmitting} type="submit">
+              <Button color="primary" isLoading={isSubmitting} radius="lg" type="submit" variant="solid">
                 Submit leave request
               </Button>
             </div>
@@ -450,7 +448,6 @@ export function LeavePage() {
       {canApprove ? (
         <Card className="border border-slate-800 bg-slate-900/80">
           <CardHeader className="flex flex-col items-start gap-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Phase 1 foundation</p>
             <h3 className="text-xl font-semibold text-white">Pending approvals</h3>
           </CardHeader>
           <CardBody>
@@ -478,12 +475,15 @@ export function LeavePage() {
                         <div className="flex gap-2">
                           <Button
                             color="success"
+                            radius="lg"
+                            variant="solid"
                             onPress={() => handleDecision('approve', leaveRequest.id)}
                           >
                             Approve
                           </Button>
                           <Button
                             color="danger"
+                            radius="lg"
                             variant="flat"
                             onPress={() => handleDecision('reject', leaveRequest.id)}
                           >
@@ -509,7 +509,6 @@ export function LeavePage() {
       {isAdmin ? (
         <Card className="border border-slate-800 bg-slate-900/80">
           <CardHeader className="flex flex-col items-start gap-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Challenge feature</p>
             <h3 className="text-xl font-semibold text-white">Public holidays</h3>
           </CardHeader>
           <CardBody className="space-y-4">
@@ -532,7 +531,7 @@ export function LeavePage() {
                 ) : null}
               </TextField>
               <div className="flex items-end">
-                <Button color="primary" isLoading={isCreatingHoliday} type="submit">
+                <Button color="primary" isLoading={isCreatingHoliday} radius="lg" type="submit" variant="solid">
                   Add holiday
                 </Button>
               </div>
@@ -551,6 +550,7 @@ export function LeavePage() {
                     </div>
                     <Button
                       color="danger"
+                      radius="lg"
                       size="sm"
                       variant="light"
                       onPress={() => handleDeleteHoliday(holiday.id)}

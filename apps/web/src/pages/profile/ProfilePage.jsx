@@ -188,15 +188,17 @@ export function ProfilePage() {
           <div className="flex flex-wrap gap-3">
             <Button
               color="primary"
+              radius="lg"
               onPress={() => profileFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
             >
               Edit Profile
             </Button>
             <Button
+              aria-label="Open profile actions"
+              color="default"
               isIconOnly
               radius="lg"
-              variant="light"
-              className="border border-white/8 text-slate-300"
+              variant="bordered"
             >
               •••
             </Button>

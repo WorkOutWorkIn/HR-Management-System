@@ -25,7 +25,14 @@ export function DirectReportCard({ person, isOpenRole = false }) {
           tertiaryText={person.workEmail}
           tertiaryClassName="mt-2 text-sm text-slate-500"
         />
-        <Button isIconOnly radius="full" size="sm" variant="light" className="text-slate-400">
+        <Button
+          aria-label={`Open actions for ${person.fullName}`}
+          color="default"
+          isIconOnly
+          radius="full"
+          size="sm"
+          variant="light"
+        >
           •••
         </Button>
       </div>

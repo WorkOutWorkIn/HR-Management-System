@@ -13,9 +13,13 @@ import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { LeavePage } from '@/pages/leave/LeavePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { OrgChartPage } from '@/pages/org-chart/OrgChartPage';
+import { PayrollPage } from '@/pages/payroll/PayrollPage';
 import { TeamViewPage } from '@/pages/org-chart/TeamViewPage';
+import { PerformancePage } from '@/pages/performance/PerformancePage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
+import { AdminSalaryManagementPage } from '@/pages/salary/AdminSalaryManagementPage';
+import { SalaryPage } from '@/pages/salary/SalaryPage';
 import { ForbiddenPage } from '@/pages/common/ForbiddenPage';
 import { ModulePlaceholderPage } from '@/pages/common/ModulePlaceholderPage';
 
@@ -39,6 +43,26 @@ const protectedChildren = [
   {
     path: APP_ROUTES.ORG_CHART.slice(1),
     element: <OrgChartPage />,
+  },
+  {
+    path: APP_ROUTES.PERFORMANCE.slice(1),
+    element: <PerformancePage />,
+  },
+  {
+    path: APP_ROUTES.SALARY.slice(1),
+    element: <SalaryPage />,
+  },
+  {
+    path: APP_ROUTES.SALARY_MANAGE.slice(1),
+    element: (
+      <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+        <AdminSalaryManagementPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: APP_ROUTES.PAYROLL.slice(1),
+    element: <PayrollPage />,
   },
   {
     path: APP_ROUTES.ORG_CHART_TEAM.slice(1),

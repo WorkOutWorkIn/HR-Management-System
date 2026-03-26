@@ -1,4 +1,5 @@
 const SIZE_STYLES = {
+  xs: 'h-10 w-10 text-sm',
   sm: 'h-11 w-11 text-sm',
   md: 'h-14 w-14 text-base',
   lg: 'h-20 w-20 text-xl',

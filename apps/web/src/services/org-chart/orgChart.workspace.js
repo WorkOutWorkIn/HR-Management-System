@@ -1,9 +1,5 @@
 import { APP_ROUTES, ROLES } from '@hrms/shared';
-import {
-  getMyReportingLine,
-  listDirectReports,
-  listReportingRelationships,
-} from './orgChart.api';
+import { getMyReportingLine, listDirectReports, listReportingRelationships } from './orgChart.api';
 
 const DEPARTMENT_ACCENTS = ['cyan', 'amber', 'violet', 'emerald'];
 
@@ -43,13 +39,26 @@ function normalizePerson(person, overrides = {}) {
 }
 
 function uniquePeople(items = []) {
-  return Array.from(
-    new Map(items.filter(Boolean).map((item) => [item.id, item])).values(),
-  );
+  return Array.from(new Map(items.filter(Boolean).map((item) => [item.id, item])).values());
 }
 
 function sortByName(items = []) {
   return [...items].sort((left, right) => left.fullName.localeCompare(right.fullName));
+}
+
+function buildChartPeople({ rootNode, relationships, employee, manager, directReports }) {
+  return sortByName(
+    uniquePeople([
+      rootNode,
+      employee,
+      manager,
+      ...(directReports || []),
+      ...relationships.flatMap((entry) => [
+        normalizePerson(entry.employee),
+        normalizePerson(entry.manager),
+      ]),
+    ]).filter(Boolean),
+  );
 }
 
 function buildDepartmentGroups({ rootNode, relationships, fallbackPeople }) {
@@ -103,19 +112,27 @@ function buildDepartmentGroups({ rootNode, relationships, fallbackPeople }) {
     });
 }
 
-function buildQuickSearchItems({ rootNode, groups, manager, directReports }) {
-  const departmentMembers = groups.flatMap((group) => [group.lead, ...group.members]);
-  return uniquePeople([rootNode, manager, ...(directReports || []), ...departmentMembers]).filter(
-    Boolean,
-  );
-}
-
 function buildBreadcrumbs(manager) {
   return [
     { label: 'Directory', to: APP_ROUTES.ORG_CHART },
     { label: manager?.department || 'Team', to: APP_ROUTES.ORG_CHART_TEAM },
     { label: manager?.department ? `${manager.department} Team` : 'Direct Reports' },
   ];
+}
+
+function buildOpenRoleNodes(groups = []) {
+  return groups.flatMap((group) =>
+    group.openRoles.map((role) => ({
+      id: role.id,
+      fullName: role.title,
+      jobTitle: role.subtitle,
+      department: group.department,
+      role: 'OPEN_ROLE',
+      status: 'OPEN',
+      managerUserId: group.lead.id,
+      kind: 'open-role',
+    })),
+  );
 }
 
 export async function loadOrgChartDirectoryWorkspace(currentUser) {
@@ -162,35 +179,40 @@ export async function loadOrgChartDirectoryWorkspace(currentUser) {
     relationships,
     fallbackPeople: [employee, manager, ...normalizedDirectReports],
   });
-  const quickSearchItems = buildQuickSearchItems({
+  const chartPeople = buildChartPeople({
     rootNode,
-    groups: departmentGroups,
+    relationships,
+    employee,
     manager,
     directReports: normalizedDirectReports,
   });
+  const openRoleNodes = buildOpenRoleNodes(departmentGroups);
 
   return {
     tabs: DIRECTORY_TABS,
     header: {
       title: 'Organization Chart',
       subtitle: 'Visualizing the reporting structure, departments, and live leadership coverage.',
-      eyebrow: 'Module 3',
+      // eyebrow: 'Module 3',
     },
     liveView: {
       label: 'Live View',
-      employeeCount: quickSearchItems.length,
+      employeeCount: chartPeople.length,
       departmentCount: departmentGroups.length,
     },
+    reportingLine: {
+      employee,
+      manager,
+      directReports: normalizedDirectReports,
+    },
+    relationships,
+    directReports: normalizedDirectReports,
     rootNode,
     focusEmployee: employee,
     manager,
     departmentGroups,
-    filters: [
-      { key: 'departments', label: 'Departments', active: true },
-      { key: 'contractors', label: 'Contractors', active: false },
-      { key: 'open-roles', label: 'Open Roles', active: true },
-    ],
-    quickSearchItems,
+    chartPeople,
+    openRoleNodes,
   };
 }
 

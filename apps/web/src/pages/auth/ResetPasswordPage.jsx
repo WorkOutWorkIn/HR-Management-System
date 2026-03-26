@@ -108,8 +108,8 @@ export function ResetPasswordPage() {
               ) : null}
             </TextField>
             <Button
-              className="w-full"
               color="primary"
+              fullWidth
               isDisabled={!hasToken}
               isLoading={isSubmitting}
               type="submit"

@@ -1,7 +1,8 @@
+@config "../../tailwind.config.js";
 @import 'tailwindcss';
+@import '@xyflow/react/dist/style.css';
 
 :root {
-  color-scheme: dark;
   font-family:
     Inter,
     ui-sans-serif,
@@ -10,14 +11,80 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  background: #020617;
+  --app-bg: #eff5fb;
+  --app-foreground: #1e293b;
+  --app-foreground-strong: #0f172a;
+  --app-muted: #475569;
+  --app-muted-soft: #64748b;
+  --app-border: rgba(148, 163, 184, 0.24);
+  --app-overlay: rgba(15, 23, 42, 0.24);
+  --app-sidebar-bg: rgba(255, 255, 255, 0.94);
+  --app-header-bg: rgba(255, 255, 255, 0.84);
+  --field-bg: rgba(255, 255, 255, 0.9);
+  --field-border: rgba(148, 163, 184, 0.32);
+  --field-border-hover: rgba(34, 211, 238, 0.4);
+  --field-border-focus: rgba(34, 211, 238, 0.58);
+  --field-foreground: #0f172a;
+  --field-placeholder: #64748b;
+  --loader-surface: rgba(255, 255, 255, 0.84);
+  --loader-border: rgba(148, 163, 184, 0.24);
+  --flow-bg:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 32%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.05), transparent 22%), #eef5fb;
+  --flow-edge: rgba(14, 116, 144, 0.28);
+  --flow-control-bg: rgba(255, 255, 255, 0.92);
+  --flow-control-border: rgba(148, 163, 184, 0.28);
+  --flow-control-text: #0f172a;
+  --flow-control-hover-bg: rgba(236, 254, 255, 0.96);
+  --flow-control-hover-border: rgba(34, 211, 238, 0.32);
+  --flow-minimap-bg: rgba(255, 255, 255, 0.92);
+  --flow-minimap-mask: rgba(226, 232, 240, 0.7);
+}
+
+html.dark {
+  color-scheme: dark;
+  --app-bg: #020617;
+  --app-foreground: #e5eef8;
+  --app-foreground-strong: #ffffff;
+  --app-muted: #94a3b8;
+  --app-muted-soft: #64748b;
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-overlay: rgba(2, 6, 23, 0.65);
+  --app-sidebar-bg: rgba(11, 20, 28, 0.95);
+  --app-header-bg: rgba(9, 19, 27, 0.88);
+  --field-bg: rgba(2, 6, 23, 0.7);
+  --field-border: rgba(255, 255, 255, 0.1);
+  --field-border-hover: rgba(34, 211, 238, 0.25);
+  --field-border-focus: rgba(34, 211, 238, 0.4);
+  --field-foreground: #ffffff;
+  --field-placeholder: #64748b;
+  --loader-surface: rgba(15, 23, 42, 0.6);
+  --loader-border: rgb(30 41 59);
+  --flow-bg:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.07), transparent 32%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.04), transparent 22%), #060d14;
+  --flow-edge: rgba(56, 189, 248, 0.42);
+  --flow-control-bg: rgba(2, 6, 23, 0.78);
+  --flow-control-border: rgba(255, 255, 255, 0.08);
+  --flow-control-text: #e2e8f0;
+  --flow-control-hover-bg: rgba(8, 47, 73, 0.95);
+  --flow-control-hover-border: rgba(34, 211, 238, 0.25);
+  --flow-minimap-bg: rgba(2, 6, 23, 0.82);
+  --flow-minimap-mask: rgba(2, 6, 23, 0.6);
+}
+
+html.light {
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: #020617;
-  color: #e5eef8;
+  background: var(--app-bg);
+  color: var(--app-foreground);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
 }
 
 * {
@@ -33,6 +100,51 @@ a {
   text-decoration: none;
 }
 
+.app-select {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--field-border);
+  border-radius: 0.75rem;
+  background-color: var(--field-bg);
+  color: var(--field-foreground);
+  padding: 0.75rem 2.75rem 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.app-select:hover {
+  border-color: var(--field-border-hover);
+}
+
+.app-select:focus {
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-border-focus) 18%, transparent);
+}
+
+.app-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.app-select option {
+  background-color: var(--field-bg);
+  color: var(--field-foreground);
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -46,4 +158,121 @@ a {
   border-radius: 999px;
   border: 2px solid #09131b;
   background: rgba(71, 85, 105, 0.7);
+}
+
+.react-flow {
+  background: var(--flow-bg);
+}
+
+.react-flow__renderer {
+  cursor: grab;
+}
+
+.react-flow__renderer:active {
+  cursor: grabbing;
+}
+
+.react-flow__edge-path {
+  stroke: var(--flow-edge);
+  stroke-width: 1.35;
+}
+
+.react-flow__controls {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.react-flow__controls-horizontal {
+  display: flex;
+  gap: 10px;
+}
+
+.react-flow__controls-button {
+  height: 40px;
+  width: 40px;
+  border: 1px solid var(--flow-control-border);
+  border-radius: 16px;
+  background: var(--flow-control-bg);
+  color: var(--flow-control-text);
+  backdrop-filter: blur(14px);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.react-flow__controls-button:hover {
+  border-color: var(--flow-control-hover-border);
+  background: var(--flow-control-hover-bg);
+  color: #0891b2;
+}
+
+.react-flow__controls-button svg {
+  max-height: 18px;
+  max-width: 18px;
+}
+
+.react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--flow-control-border);
+  border-radius: 22px;
+  background: var(--flow-minimap-bg);
+  box-shadow: 0 20px 45px rgba(2, 12, 27, 0.34);
+}
+
+.react-flow__minimap-mask {
+  fill: var(--flow-minimap-mask);
+}
+
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/85,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/72,
+html.light .bg-slate-900\/70 {
+  background-color: rgba(255, 255, 255, 0.84) !important;
+}
+
+html.light .bg-slate-950\/82,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/70,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/55,
+html.light .bg-slate-950\/45 {
+  background-color: rgba(241, 245, 249, 0.84) !important;
+}
+
+html.light .bg-\[\#060d14\],
+html.light .bg-\[\#08111a\],
+html.light .bg-\[\#09131b\],
+html.light .bg-\[\#0b141c\]\/95 {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700,
+html.light .border-white\/10,
+html.light .border-white\/8,
+html.light .border-white\/6 {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
 }

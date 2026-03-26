@@ -13,5 +13,6 @@ export const APP_ROUTES = Object.freeze({
   ORG_CHART_TEAM: '/org-chart/team',
   PERFORMANCE: '/performance',
   SALARY: '/salary',
+  SALARY_MANAGE: '/salary/manage',
   PAYROLL: '/payroll',
 });

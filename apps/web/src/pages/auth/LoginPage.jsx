@@ -84,7 +84,7 @@ export function LoginPage() {
               <Input placeholder="Enter your password" {...register('password')} />
               {errors.password ? <FieldError>{errors.password.message}</FieldError> : null}
             </TextField>
-            <Button className="w-full" color="primary" isLoading={isSubmitting} type="submit">
+            <Button color="primary" fullWidth isLoading={isSubmitting} type="submit">
               Sign in
             </Button>
           </form>
@@ -93,9 +93,10 @@ export function LoginPage() {
             <Link className="text-cyan-300 hover:text-cyan-200" to={APP_ROUTES.FORGOT_PASSWORD}>
               Forgot password?
             </Link>
-            <span>
-              Dev seeds: admin@hrms.local / Admin123! and employee@hrms.local / EmployeeTemp123!
-            </span>
+            {/* <span>
+              Dev seeds: admin@hrms.local / Admin123!, manager@hrms.local / Manager123!, and
+              employee@hrms.local / EmployeeTemp123!
+            </span> */}
           </div>
         </CardBody>
       </Card>

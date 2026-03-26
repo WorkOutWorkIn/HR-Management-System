@@ -80,7 +80,7 @@ export function TeamViewPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button className="bg-white/10 text-white" radius="lg" variant="solid">
+            <Button color="default" radius="lg" variant="faded">
               Export PDF
             </Button>
             <Button color="primary" radius="lg">
