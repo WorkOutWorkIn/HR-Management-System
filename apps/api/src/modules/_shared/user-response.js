@@ -22,6 +22,10 @@ export function serializeUser(user) {
       user.annualLeaveQuota === null || user.annualLeaveQuota === undefined
         ? null
         : Number(user.annualLeaveQuota),
+    sickLeaveQuota:
+      user.sickLeaveQuota === null || user.sickLeaveQuota === undefined
+        ? null
+        : Number(user.sickLeaveQuota),
     lockedAt: user.lockedAt,
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,

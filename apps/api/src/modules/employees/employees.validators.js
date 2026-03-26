@@ -54,6 +54,10 @@ export const createEmployeeValidators = [
     .optional()
     .isFloat({ min: 0, max: 365 })
     .withMessage('Annual leave quota must be between 0 and 365 days'),
+  body('sickLeaveQuota')
+    .optional()
+    .isFloat({ min: 0, max: 365 })
+    .withMessage('Sick leave quota must be between 0 and 365 days'),
   optionalTrimmedString('department', 100),
   optionalTrimmedString('jobTitle', 100),
 ];
@@ -72,6 +76,10 @@ const adminPatchFields = [
     .optional()
     .isFloat({ min: 0, max: 365 })
     .withMessage('Annual leave quota must be between 0 and 365 days'),
+  body('sickLeaveQuota')
+    .optional()
+    .isFloat({ min: 0, max: 365 })
+    .withMessage('Sick leave quota must be between 0 and 365 days'),
 ];
 
 export const updateEmployeeValidators = [
@@ -85,6 +93,7 @@ export const updateEmployeeValidators = [
       'status',
       'managerUserId',
       'annualLeaveQuota',
+      'sickLeaveQuota',
     ].some((field) => value[field] !== undefined);
 
     if (!hasAnyField) {
