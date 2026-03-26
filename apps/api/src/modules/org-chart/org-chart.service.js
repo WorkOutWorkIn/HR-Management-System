@@ -235,18 +235,14 @@ export async function getMyReportingLine(userId) {
 }
 
 export async function listReportingRelationships(actorUserId) {
-  const actor = await getUserOrThrow(actorUserId);
-
-  if (actor.role !== ROLES.ADMIN) {
-    throw new ApiError(403, 'Only administrators can view all reporting relationships', 'FORBIDDEN');
-  }
+  await getUserOrThrow(actorUserId);
 
   const employees = await UserModel.findAll({
     include: [
       {
         model: UserModel,
         as: 'managerUser',
-        attributes: ['id', 'fullName', 'workEmail', 'role'],
+        attributes: ['id', 'fullName', 'workEmail', 'role', 'department', 'jobTitle'],
       },
     ],
     attributes: ['id', 'fullName', 'workEmail', 'role', 'managerUserId', 'department', 'jobTitle'],

@@ -25,7 +25,7 @@ router.get(
 );
 router.get(
   '/relationships',
-  allowRoles([ROLES.ADMIN]),
+  allowRoles([ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE]),
   listReportingRelationshipsController,
 );
 router.patch(

@@ -20,10 +20,12 @@ export function OrgChartPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
   const canViewDirectReports = user?.role === ROLES.ADMIN || user?.role === ROLES.MANAGER;
+  const defaultViewMode = isAdmin ? 'organization' : 'reporting-line';
   const [workspace, setWorkspace] = useState(null);
   const [reportingLine, setReportingLine] = useState(null);
   const [relationships, setRelationships] = useState([]);
   const [directReports, setDirectReports] = useState([]);
+  const [viewMode, setViewMode] = useState(defaultViewMode);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -46,7 +48,9 @@ export function OrgChartPage() {
     setErrorMessage(null);
 
     try {
-      const nextWorkspace = await loadOrgChartDirectoryWorkspace(user);
+      const nextWorkspace = await loadOrgChartDirectoryWorkspace(user, {
+        showFullOrganization: viewMode === 'organization',
+      });
 
       setWorkspace(nextWorkspace);
       setSelectedNodeId(null);
@@ -58,7 +62,11 @@ export function OrgChartPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, viewMode]);
+
+  useEffect(() => {
+    setViewMode(defaultViewMode);
+  }, [defaultViewMode]);
 
   useEffect(() => {
     loadOrgChartData();
@@ -105,6 +113,34 @@ export function OrgChartPage() {
 
       {workspace ? (
         <OrgChartCanvas
+          headerActions={
+            <div className="inline-flex rounded-full border border-white/8 bg-slate-950/60 p-1 shadow-[0_12px_30px_rgba(2,12,27,0.24)]">
+              <button
+                type="button"
+                className={[
+                  'rounded-full px-4 py-2 text-sm font-medium transition',
+                  viewMode === 'reporting-line'
+                    ? 'bg-cyan-400/14 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
+                    : 'text-slate-400 hover:text-white',
+                ].join(' ')}
+                onClick={() => setViewMode('reporting-line')}
+              >
+                My Reporting Line
+              </button>
+              <button
+                type="button"
+                className={[
+                  'rounded-full px-4 py-2 text-sm font-medium transition',
+                  viewMode === 'organization'
+                    ? 'bg-cyan-400/14 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
+                    : 'text-slate-400 hover:text-white',
+                ].join(' ')}
+                onClick={() => setViewMode('organization')}
+              >
+                Whole Organization
+              </button>
+            </div>
+          }
           workspace={workspace}
           selectedNodeId={selectedNodeId}
           onSelectNode={setSelectedNodeId}

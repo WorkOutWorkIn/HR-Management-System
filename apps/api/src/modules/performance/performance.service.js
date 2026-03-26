@@ -257,7 +257,7 @@ async function ensureNoOtherOpenReviewPeriod({ excludeId, transaction }) {
   if (openPeriod) {
     throw new ApiError(
       409,
-      'Only one review period can be OPEN at a time',
+      `Existing review period "${openPeriod.name}" is active. You can only have one review period open at a time.`,
       'OPEN_REVIEW_PERIOD_EXISTS',
     );
   }
