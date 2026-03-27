@@ -39,5 +39,5 @@ export const upsertSalaryForUserController = asyncHandler(async (request, respon
     request,
   });
 
-  response.status(201).json(result);
+  response.status(result.operation === 'update' ? 200 : 201).json(result);
 });

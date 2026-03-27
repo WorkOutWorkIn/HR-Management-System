@@ -79,7 +79,12 @@ function PayrollBreakdownCard({ payrollRecord }) {
             </p>
           ) : null}
         </div>
-        <p className="text-sm text-slate-400">Issued {payrollRecord.createdAt?.slice(0, 10)}</p>
+        <div className="text-right text-sm text-slate-400">
+          <p>Issued {payrollRecord.createdAt?.slice(0, 10)}</p>
+          <p>
+            By {payrollRecord.generatedByUser?.fullName || payrollRecord.generatedByUser?.workEmail || 'System'}
+          </p>
+        </div>
       </div>
 
       <div className="mt-6 space-y-3">
@@ -316,7 +321,7 @@ export function PayrollPage() {
             <p className="mt-3 max-w-2xl text-base text-slate-300">
               {isAdmin
                 ? 'Generate monthly payroll for the team, prevent duplicate month issuance, and review each employee payslip.'
-                : 'View your issued payslips with a simple breakdown of base salary, deductions, and net pay.'}
+                : 'View your issued payslips with a simple breakdown of base salary, deductions, net pay, and issuer.'}
             </p>
           </div>
           {isAdmin ? (
@@ -325,9 +330,14 @@ export function PayrollPage() {
                 <Label>Payroll month</Label>
                 <Input type="month" value={payrollMonth} onValueChange={setPayrollMonth} />
               </TextField>
-              <Button color="primary" isLoading={isGeneratingPayroll} onPress={handleGeneratePayroll}>
-                Generate payroll for everyone
-              </Button>
+                <Button
+                  className="min-w-max whitespace-nowrap"
+                  color="primary"
+                  isLoading={isGeneratingPayroll}
+                  onPress={handleGeneratePayroll}
+                >
+                  Generate payrolls
+                </Button>
             </div>
           ) : null}
         </div>

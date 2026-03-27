@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/db.js';
 import { writeAuditLog } from '../../audit/audit.service.js';
+import { ACCOUNT_STATUSES } from '../../constants/account-statuses.js';
 import { AUDIT_ACTIONS } from '../../constants/audit-actions.js';
 import { PayrollRecordModel, SalaryRecordModel, UserModel } from '../../database/models/index.js';
 import { ApiError } from '../../utils/ApiError.js';
@@ -52,6 +53,13 @@ function serializePayrollRecord(record) {
     ],
     totalDeductions: Number(record.deductionAmount),
     netPay: Number(record.netPay),
+    generatedByUser: record.generatedByUser
+      ? {
+          id: record.generatedByUser.id,
+          fullName: record.generatedByUser.fullName,
+          workEmail: record.generatedByUser.workEmail,
+        }
+      : null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -76,6 +84,14 @@ async function getLatestSalaryForMonth(userId, monthEnd, transaction) {
 export async function listMyPayroll({ actorUserId, request }) {
   const payrollRecords = await PayrollRecordModel.findAll({
     where: { userId: actorUserId },
+    include: [
+      {
+        model: UserModel,
+        as: 'generatedByUser',
+        attributes: ['id', 'fullName', 'workEmail'],
+        required: false,
+      },
+    ],
     order: [
       ['created_at', 'DESC'],
       ['payroll_month', 'DESC'],
@@ -117,6 +133,14 @@ export async function listPayrollUsers({ search }) {
       where,
     }),
     PayrollRecordModel.findAll({
+      include: [
+        {
+          model: UserModel,
+          as: 'generatedByUser',
+          attributes: ['id', 'fullName', 'workEmail'],
+          required: false,
+        },
+      ],
       order: [
         ['created_at', 'DESC'],
         ['payroll_month', 'DESC'],
@@ -158,6 +182,14 @@ export async function getPayrollForUser({ actorUserId, userId, request }) {
 
   const payrollRecords = await PayrollRecordModel.findAll({
     where: { userId },
+    include: [
+      {
+        model: UserModel,
+        as: 'generatedByUser',
+        attributes: ['id', 'fullName', 'workEmail'],
+        required: false,
+      },
+    ],
     order: [
       ['created_at', 'DESC'],
       ['payroll_month', 'DESC'],
@@ -202,6 +234,11 @@ export async function generatePayrollForEveryone({ actorUserId, payrollMonth, re
 
   const users = await UserModel.findAll({
     attributes: ['id', 'fullName'],
+    where: {
+      status: {
+        [Op.ne]: ACCOUNT_STATUSES.DISABLED,
+      },
+    },
     order: [['full_name', 'ASC']],
   });
 
