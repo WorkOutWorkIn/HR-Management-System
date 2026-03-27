@@ -1,0 +1,4 @@
+- Employee Onboarding, Authentication & Profile - Ming Sheng
+- Leave Management System - Alex Pan Han Ting
+- Org Chart & Performance Management - Geoffery
+- Salary Management & Monthly Payroll Issuance - Zheng Hong
