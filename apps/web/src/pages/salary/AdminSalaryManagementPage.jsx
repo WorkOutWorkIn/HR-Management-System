@@ -160,7 +160,11 @@ export function AdminSalaryManagementPage() {
       const result = await updateSalaryForUser(selectedEmployeeId, values);
       setSelectedSalaryRecord(result.salaryRecord);
       setSalaryHistory(result.history || []);
-      setNotice('Salary record created successfully. Previous salary versions were kept.');
+      setNotice(
+        result.operation === 'update'
+          ? 'Salary updated successfully for the selected effective date.'
+          : 'Salary updated successfully. A new effective-date record was added to salary history.',
+      );
 
       setEmployees((currentEmployees) =>
         currentEmployees.map((employee) =>
@@ -184,7 +188,7 @@ export function AdminSalaryManagementPage() {
               Salary management
             </h1>
             <p className="mt-3 max-w-2xl text-base text-slate-300">
-              Select an employee, then create or update their base salary and effective date.
+              Select an employee, then update their base salary and effective date.
             </p>
           </div>
           <Button as={Link} to={APP_ROUTES.SALARY} variant="bordered" className="border-white/10">
@@ -328,7 +332,7 @@ export function AdminSalaryManagementPage() {
                   </TextField>
                   <div className="md:col-span-2">
                     <Button color="primary" isLoading={isSubmitting} type="submit">
-                      Create salary version
+                      Update salary
                     </Button>
                   </div>
                 </form>
@@ -338,7 +342,7 @@ export function AdminSalaryManagementPage() {
                     <p className="text-xs uppercase tracking-[0.24em] text-cyan-300">
                       Salary history
                     </p>
-                    <h3 className="mt-2 text-xl font-semibold text-white">Previous versions</h3>
+                    <h3 className="mt-2 text-xl font-semibold text-white">Salary history</h3>
                   </div>
                   {salaryHistory.length ? (
                     <div className="space-y-3">

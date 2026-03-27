@@ -49,8 +49,9 @@ export function AuditTrailPage() {
               Audit trail
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-300">
-              Review login activity, password reset actions, and account status changes across the
-              platform. Records are read-only and ordered by newest first.
+              Review login activity, password resets, account status changes, salary access and
+              edits, and payroll issuance events across the platform. Records are read-only and
+              ordered by newest first.
             </p>
           </div>
           <Button variant="bordered" className="border-white/10" onPress={loadAuditTrail}>
@@ -66,8 +67,8 @@ export function AuditTrailPage() {
           <div>
             <h2 className="text-xl font-semibold text-white">Security event log</h2>
             <p className="text-sm text-slate-400">
-              Showing the latest {Math.min(total, 100)} of {total} tracked authentication and
-              account-security events.
+              Showing the latest {Math.min(total, 100)} of {total} tracked authentication,
+              salary-access, and payroll events.
             </p>
           </div>
         </CardHeader>

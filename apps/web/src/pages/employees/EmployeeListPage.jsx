@@ -76,12 +76,14 @@ export function EmployeeListPage() {
 
           {canOnboardEmployees ? (
             <Button color="primary" radius="lg" onPress={() => setIsOnboardingOpen(true)}>
-              Onboard employee
+              Onboarding
             </Button>
           ) : null}
         </CardHeader>
         <CardBody className="space-y-4">
-          {directoryErrorMessage ? <NoticeBanner tone="danger">{directoryErrorMessage}</NoticeBanner> : null}
+          {directoryErrorMessage ? (
+            <NoticeBanner tone="danger">{directoryErrorMessage}</NoticeBanner>
+          ) : null}
           {loading ? (
             <PageLoader label="Loading employees..." />
           ) : employees.length ? (

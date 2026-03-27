@@ -21,6 +21,8 @@ const EVENT_GROUP_CHIP_COLORS = {
   LOGIN: 'primary',
   PASSWORD: 'secondary',
   ACCOUNT: 'warning',
+  SALARY: 'success',
+  PAYROLL: 'primary',
 };
 
 const STATUS_CHIP_COLORS = {
@@ -123,6 +125,49 @@ function buildDetailSummary(entry) {
       return {
         status: details.status || null,
         summary: 'First-login password setup completed.',
+      };
+    case 'SALARY_RECORD_UPDATED':
+      return {
+        summary:
+          details.operation === 'update'
+            ? `Salary updated to ${details.baseSalary} effective ${details.effectiveDate}.`
+            : `Salary created at ${details.baseSalary} effective ${details.effectiveDate}.`,
+        secondary:
+          details.previousValues?.baseSalary !== undefined
+            ? `Previous salary: ${details.previousValues.baseSalary} effective ${details.previousValues.effectiveDate}`
+            : null,
+      };
+    case 'SALARY_VIEWED':
+      return {
+        summary:
+          details.scope === 'self'
+            ? 'Sensitive salary data viewed by the employee.'
+            : 'Sensitive salary data viewed by an administrator.',
+        secondary: details.viewedUserId ? `Viewed user id: ${details.viewedUserId}` : null,
+      };
+    case 'PAYROLL_GENERATED':
+      return {
+        summary: `Payroll run issued for ${details.payrollMonth}.`,
+        secondary:
+          details.generatedCount !== undefined
+            ? `Generated: ${details.generatedCount}, already issued: ${details.alreadyIssuedCount || 0}, skipped: ${details.skippedCount || 0}`
+            : null,
+      };
+    case 'PAYROLL_VIEWED':
+      return {
+        summary:
+          details.scope === 'self'
+            ? 'Payroll records viewed by the employee.'
+            : 'Payroll records viewed by an administrator.',
+        secondary: details.viewedUserId ? `Viewed user id: ${details.viewedUserId}` : null,
+      };
+    case 'PAYROLL_CORRECTION_ISSUED':
+      return {
+        summary: `Payroll correction issued for ${details.payrollMonth}.`,
+        secondary:
+          details.correctionReason || details.sequenceNumber
+            ? `Correction #${details.sequenceNumber || 'N/A'}${details.correctionReason ? `: ${details.correctionReason}` : ''}`
+            : null,
       };
     default:
       return {

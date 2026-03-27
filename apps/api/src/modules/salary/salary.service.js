@@ -162,15 +162,23 @@ export async function createSalaryRecordForUser({ actorUserId, userId, payload, 
       userId,
     };
 
-    if (existingRecord) {
-      throw new ApiError(
-        409,
-        'A salary record with the same effective date already exists. Choose a new effective date to preserve salary history.',
-        'SALARY_EFFECTIVE_DATE_ALREADY_EXISTS',
-      );
-    }
+    const previousValues = existingRecord
+      ? {
+          baseSalary: Number(existingRecord.baseSalary),
+          effectiveDate: existingRecord.effectiveDate,
+          updatedAt: existingRecord.updatedAt,
+        }
+      : null;
 
-    const salaryRecord = await SalaryRecordModel.create(values, { transaction });
+    let salaryRecord;
+    let operation = 'create';
+
+    if (existingRecord) {
+      salaryRecord = await existingRecord.update(values, { transaction });
+      operation = 'update';
+    } else {
+      salaryRecord = await SalaryRecordModel.create(values, { transaction });
+    }
 
     await writeAuditLog(
       {
@@ -183,7 +191,8 @@ export async function createSalaryRecordForUser({ actorUserId, userId, payload, 
           salaryRecordId: salaryRecord.id,
           baseSalary: Number(salaryRecord.baseSalary),
           effectiveDate: salaryRecord.effectiveDate,
-          operation: 'create',
+          operation,
+          previousValues,
         },
       },
       { transaction },
@@ -192,6 +201,7 @@ export async function createSalaryRecordForUser({ actorUserId, userId, payload, 
     await transaction.commit();
 
     return {
+      operation,
       salaryRecord: serializeSalaryRecord(salaryRecord),
       history: (await getSalaryHistory(userId)).map(serializeSalaryRecord),
     };
